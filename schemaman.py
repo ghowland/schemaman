@@ -39,11 +39,29 @@ def Usage(error=None):
   print
   print 'usage: %s [options] action <action_args>' % os.path.basename(sys.argv[0])
   print
+  print 'Schema Actions:'
+  print
+  print '  info                                Print info on current schema directory'
+  print '  init <path>                         Initialize a path for new schemas'
+  print '  create <schema>                     Create a schema interactively'
+  print '  create <schema> <source>            Create a schema instance interactively'
+  print '  export <schema> <source>            Export a database schema from a source'
+  print '  migrate <schema> <source> <target>  Migrate schema/data from source to target'
+  print
+  print 'Data Actions:'
+  print
+  print '  put <schema> <source> <json>        Put JSON data into a Schema instance'
+  print '  get <schema> <source> <json>        Get Schema instance records from JSON keys'
+  print '  filter <schema> <source> <json>     Filter Schema instance records'
+  print '  delete <schema> <source> <json>     Delete records from Schema instance'
+  print
   print 'Options:'
   print
-  print '  -h, -?, --help          This usage information'
+  print '  -d <path>, --directory=<path>       Directory for SchemaMan data/conf/schemas'
+  print '                                      (Default is current working directory)'
   print
-  print '  -v, --verbose           Verbose output'
+  print '  -h, -?, --help                      This usage information'
+  print '  -v, --verbose                       Verbose output'
   print
   
   sys.exit(exit_code)
