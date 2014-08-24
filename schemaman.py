@@ -25,44 +25,76 @@ from utility.error import Error
 from utility.path import *
 
 
+def ProcessAction(action, action_args, command_options):
+  """Process the specified action, by it's action arguments.  Using command options."""
+  if action == 'info':
+    if action_args:
+      Usage('info action does not take any arguments: %s' % action_args)
+  
+  elif action == 'init':
+    pass
+  
+  elif action == 'create':
+    pass
+  
+  elif action == 'export':
+    pass
+  
+  elif action == 'migrate':
+    pass
+  
+  else:
+    Usage('Unknown action: %s' % action)
+
+
 def Usage(error=None):
   """Print usage information, any errors, and exit.  
 
   If errors, exit code = 1, otherwise 0.
   """
+  output = ''
+  
   if error:
-    print '\nerror: %s' % error
+    output += '\nerror: %s\n' % error
     exit_code = 1
   else:
     exit_code = 0
   
-  print
-  print 'usage: %s [options] action <action_args>' % os.path.basename(sys.argv[0])
-  print
-  print 'Schema Actions:'
-  print
-  print '  info                                Print info on current schema directory'
-  print '  init <path>                         Initialize a path for new schemas'
-  print '  create <schema>                     Create a schema interactively'
-  print '  create <schema> <source>            Create a schema instance interactively'
-  print '  export <schema> <source>            Export a database schema from a source'
-  print '  migrate <schema> <source> <target>  Migrate schema/data from source to target'
-  print
-  print 'Data Actions:'
-  print
-  print '  put <schema> <source> <json>        Put JSON data into a Schema instance'
-  print '  get <schema> <source> <json>        Get Schema instance records from JSON keys'
-  print '  filter <schema> <source> <json>     Filter Schema instance records'
-  print '  delete <schema> <source> <json>     Delete records from Schema instance'
-  print
-  print 'Options:'
-  print
-  print '  -d <path>, --directory=<path>       Directory for SchemaMan data/conf/schemas'
-  print '                                      (Default is current working directory)'
-  print
-  print '  -h, -?, --help                      This usage information'
-  print '  -v, --verbose                       Verbose output'
-  print
+  output += '\n'
+  output += 'usage: %s [options] action <action_args>' % os.path.basename(sys.argv[0])
+  output += '\n'
+  output += 'Schema Actions:\n'
+  output += '\n'
+  output += '  info                                Print info on current schema directory\n'
+  output += '  init <path>                         Initialize a path for new schemas\n'
+  output += '  create <schema>                     Create a schema interactively\n'
+  output += '  create <schema> <source>            Create a schema instance interactively\n'
+  output += '  export <schema> <source>            Export a database schema from a source\n'
+  output += '  migrate <schema> <source> <target>  Migrate schema/data from source to target\n'
+  output += '\n'
+  output += 'Data Actions:\n'
+  output += '\n'
+  output += '  put <schema> <source> <json>        Put JSON data into a Schema instance\n'
+  output += '  get <schema> <source> <json>        Get Schema instance records from JSON keys\n'
+  output += '  filter <schema> <source> <json>     Filter Schema instance records\n'
+  output += '  delete <schema> <source> <json>     Delete records from Schema instance\n'
+  output += '\n'
+  output += 'Options:\n'
+  output += '\n'
+  output += '  -d <path>, --dir=<path>       Directory for SchemaMan data/conf/schemas\n'
+  output += '                                      (Default is current working directory)\n'
+  output += '\n'
+  output += '  -h, -?, --help                      This usage information\n'
+  output += '  -v, --verbose                       Verbose output\n'
+  output += '\n'
+  
+  
+  # STDOUT - Non-error exit
+  if exit_code == 0:
+    sys.stdout.write(output)
+  # STDERR - Failure exit
+  else:
+    sys.stderr.write(output)
   
   sys.exit(exit_code)
 
@@ -72,10 +104,10 @@ def Main(args=None):
     args = []
 
   
-  long_options = ['help', 'client', 'server', 'no-relay', 'once']
+  long_options = ['dir=', 'verbose', 'help']
   
   try:
-    (options, args) = getopt.getopt(args, '?hvcs1', long_options)
+    (options, args) = getopt.getopt(args, '?hvd:', long_options)
   except getopt.GetoptError, e:
     Usage(e)
   
@@ -110,6 +142,7 @@ def Main(args=None):
 
   #try:
   if 1:
+    ProcessAction(args[0], args[1:], command_options)
     pass
   
   #NOTE(g): Catch all exceptions, and return in properly formatted output
