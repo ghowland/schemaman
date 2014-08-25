@@ -27,21 +27,61 @@ from utility.path import *
 
 def ProcessAction(action, action_args, command_options):
   """Process the specified action, by it's action arguments.  Using command options."""
+  # Get the Datasource Handler
+  datasource_handler = GetDatasourceHandler()
+  
+  # If Action is info
   if action == 'info':
     if action_args:
       Usage('info action does not take any arguments: %s' % action_args)
   
+  # Else, Initialize a directory to be a SchemaMan location
   elif action == 'init':
     pass
   
-  elif action == 'create':
-    pass
+  # Else, if Action prefix is Schema
+  elif action == 'schema':
+    if action == 'create':
+      result = datasource_handler.CreateSchema()
+    
+    elif action == 'export':
+      result = datasource_handler.ExportSchema()
+    
+    elif action == 'migrate':
+      # Export from one, and import to another, in one step
+      source_result = datasource_handler.ExportSchema()
+      target_result = datasource_handler.UpdateSchema(source_result)
+    
+    else:
+      Usage('Unknown Schema action: %s' % action)
   
-  elif action == 'export':
-    pass
   
-  elif action == 'migrate':
-    pass
+  # Else, if Action prefix is Data
+  elif action == 'data':
+    if action == 'export':
+      result = datasource_handler.ExportData()
+    
+    elif action == 'import':
+      result = datasource_handler.ImportData()
+    
+    else:
+      Usage('Unknown Data action: %s' % action)
+  
+  # Put
+  elif action == 'put':
+    result = datasource_handler.Put()
+  
+  # Get
+  elif action == 'get':
+    result = datasource_handler.Get()
+  
+  # Filter
+  elif action == 'filter':
+    result = datasource_handler.Filter()
+  
+  # Delete
+  elif action == 'delete':
+    result = datasource_handler.Delete()
   
   else:
     Usage('Unknown action: %s' % action)
@@ -82,8 +122,9 @@ def Usage(error=None):
   output += '\n'
   output += 'Options:\n'
   output += '\n'
-  output += '  -d <path>, --dir=<path>       Directory for SchemaMan data/conf/schemas\n'
-  output += '                                      (Default is current working directory)\n'
+  output += '  -d <path>, --dir=<path>             Directory for SchemaMan data/conf/schemas\n'
+  output += '                                          (Default is current working directory)\n'
+  output += '  -y, --yes                           Answer Yes to all prompts\n'
   output += '\n'
   output += '  -h, -?, --help                      This usage information\n'
   output += '  -v, --verbose                       Verbose output\n'
@@ -105,16 +146,17 @@ def Main(args=None):
     args = []
 
   
-  long_options = ['dir=', 'verbose', 'help']
+  long_options = ['dir=', 'verbose', 'help', 'yes']
   
   try:
-    (options, args) = getopt.getopt(args, '?hvd:', long_options)
+    (options, args) = getopt.getopt(args, '?hvyd:', long_options)
   except getopt.GetoptError, e:
     Usage(e)
   
   # Dictionary of command options, with defaults
   command_options = {}
   command_options['verbose'] = False
+  command_options['always_yes'] = False
   
   
   # Process out CLI options
@@ -126,6 +168,10 @@ def Main(args=None):
     # Verbose output information
     elif option in ('-v', '--verbose'):
       command_options['verbose'] = True
+    
+    # Always answer Yes to prompts
+    elif option in ('-y', '--yes'):
+      command_options['always_yes'] = True
     
     # Invalid option
     else:
