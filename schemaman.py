@@ -52,6 +52,7 @@ def ProcessAction(action, action_args, command_options):
       source_result = datasource_handler.ExportSchema()
       target_result = datasource_handler.UpdateSchema(source_result)
     
+    # ERROR
     else:
       Usage('Unknown Schema action: %s' % action)
   
@@ -64,6 +65,7 @@ def ProcessAction(action, action_args, command_options):
     elif action == 'import':
       result = datasource_handler.ImportData()
     
+    # ERROR
     else:
       Usage('Unknown Data action: %s' % action)
   
@@ -83,6 +85,7 @@ def ProcessAction(action, action_args, command_options):
   elif action == 'delete':
     result = datasource_handler.Delete()
   
+  # ERROR
   else:
     Usage('Unknown action: %s' % action)
 
