@@ -41,13 +41,15 @@ def ProcessAction(action, action_args, command_options):
   
   # Else, if Action prefix is Schema
   elif action == 'schema':
-    if action == 'create':
+    if len(action_args) == 0:
+      Usage('"schema" action requires arguments: create, export, migrate')
+    elif action_args[0] == 'create':
       result = datasource_handler.CreateSchema()
     
-    elif action == 'export':
+    elif action_args[0] == 'export':
       result = datasource_handler.ExportSchema()
     
-    elif action == 'migrate':
+    elif action_args[0] == 'migrate':
       # Export from one, and import to another, in one step
       source_result = datasource_handler.ExportSchema()
       target_result = datasource_handler.UpdateSchema(source_result)
@@ -59,10 +61,12 @@ def ProcessAction(action, action_args, command_options):
   
   # Else, if Action prefix is Data
   elif action == 'data':
-    if action == 'export':
+    if len(action_args) == 0:
+      Usage('"data" action requires arguments: export, import')
+    elif action_args[0] == 'export':
       result = datasource_handler.ExportData()
     
-    elif action == 'import':
+    elif action_args[0] == 'import':
       result = datasource_handler.ImportData()
     
     # ERROR
