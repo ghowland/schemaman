@@ -41,6 +41,13 @@ opsdb:
         port: 3306
     
     master_host_id: 1
+    
+    database: opsdb
+    
+    user: roleaccount
+    password_path: /Users/ghowland/secure/datasource/opsdb_roleaccount.txt
+  
+  record_path: /Users/ghowland/projects/schema/opsdb/opsdb.yaml
 ```
 
 
