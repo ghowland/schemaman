@@ -13,8 +13,11 @@ Allows versioning data.
 
 ## Change Managament
 
+Approvals can be required to commit data from a Working Version into the datasource.
+
 ## Security, Owners, and Actions
 
+The Change Management can invoke scripts against data for owners, groups to provide security and proper approvals, and can invoke scripts as actions to perform pre- and post- commit work at various levels.
 
 # Command Line Usage
 
