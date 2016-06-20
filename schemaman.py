@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 """
 SchemaMan - Schema Manager.  Cross database schema revision control, data migration and data access.
 

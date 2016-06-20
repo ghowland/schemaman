@@ -16,3 +16,33 @@ Allows versioning data.
 ## Security, Owners, and Actions
 
 
+# Command Line Usage
+
+```
+Schema Actions:
+
+  info                                       Print info on current schema directory
+  init <path>                                Initialize a path for new schemas
+  schema create <schema>                     Create a schema interactively
+  schema export <schema> <source>            Export a database schema from a source
+  schema update <schema> <source> <target>   Migrate schema/data from source to target
+  data export <schema> <source>              Export all the data from the schema/source
+  data import <schema> <source>              Import data into the schema/source
+
+Data Actions:
+
+  put <schema> <source> <json>        Put JSON data into a Schema instance
+  get <schema> <source> <json>        Get Schema instance records from JSON keys
+  filter <schema> <source> <json>     Filter Schema instance records
+  delete <schema> <source> <json>     Delete records from Schema instance
+
+Options:
+
+  -d <path>, --dir=<path>             Directory for SchemaMan data/conf/schemas
+                                          (Default is current working directory)
+  -y, --yes                           Answer Yes to all prompts
+
+  -h, -?, --help                      This usage information
+  -v, --verbose                       Verbose output
+```
+

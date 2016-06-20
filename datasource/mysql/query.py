@@ -1,4 +1,9 @@
+"""
+Datasource: MySQL: Querying
+"""
+
 import mysql.connector
+
 
 class MySQLCursorDict(mysql.connector.cursor.MySQLCursor):
     def _row_to_python(self, rowdata, desc=None):
@@ -42,8 +47,6 @@ def SanitizeSQL(text):
       text = str(text.decode('ascii', 'ignore'))
   
   return text.replace("'", "''").replace('\\', '\\\\')
-
-
 
 
 def FormatStringOrNullFromDict(data, key, strict=False):
