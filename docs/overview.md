@@ -38,7 +38,7 @@ opsdb:
     # All of these database/user/password_path fields can be specified per host as well, which overrides these higher level defaults
     database: opsdb
     user: roleaccount
-    password_path: data/secure/opsdb_roleaccount.txt
+    password_path: data/examples/secure/opsdb_roleaccount.txt
     
     master_host_id: 1
     hosts:
