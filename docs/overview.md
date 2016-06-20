@@ -24,7 +24,7 @@
 
 ## Specifications
 
-### Data Set: examples/opsdb/opsdb.yaml
+### Data Set: examples/schema/opsdb/opsdb.yaml
 
 ```
 # Can have multiple Data Sets per data set YAML file, they are the top level objects.
@@ -48,9 +48,9 @@ opsdb:
         type: mysql_56
   
   schema_paths:
-    - /Users/ghowland/projects/schema/opsdb/opsdb.yaml
+    - data/examples/schema/opsdb/opsdb.yaml
   
-  value_type_path: data/schema/value_types.yaml
+  value_type_path: data/schema/value_types/standard__general.yaml
 ```
 
 
