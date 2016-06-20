@@ -61,10 +61,10 @@ mysql_56:
   name: MySQL 5.6
   handler: mysql
   
-  value_type_path: data/schema/value_types/mysql.yaml
+  value_type_path: data/schema/value_types/standard_mysql.yaml
 ```
 
-### Value Types: data/schema/value_types.yaml
+### Value Types: data/schema/value_types/standard__general.yaml
 
 ```
 pkey:
