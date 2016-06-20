@@ -75,6 +75,18 @@ int:
   name: Integer
   info: Whole numbers
 
+parent:
+  name: Parent Record
+  info: Points to a record in this table which is hierarchical parent to the current record.  Points at PKEY.
+
+lookup:
+  name: Lookup Record
+  info: Points to a record in another table, specified in the schema definition.  Points at PKEY.
+
+float:
+  name: Float
+  info: Floating point numbers.  Less precise than Decimal, but faster.
+
 decimal:
   name: Decimal
   info: Decimal numbers.  Precise, without floating point less.
@@ -136,6 +148,18 @@ pkey:
 int:
   type: INTEGER
   args: [11]
+
+parent:
+  type: INTEGER
+  args: [11]
+
+lookup:
+  type: INTEGER
+  args: [11]
+
+float:
+  type: FLOAT
+  args: [16, 5]
 
 decimal:
   type: DECIMAL

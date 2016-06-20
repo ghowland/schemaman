@@ -7,6 +7,18 @@ int:
   type: INTEGER
   args: [11]
 
+parent:
+  type: INTEGER
+  args: [11]
+
+lookup:
+  type: INTEGER
+  args: [11]
+
+float:
+  type: FLOAT
+  args: [16, 5]
+
 decimal:
   type: DECIMAL
   args: [16, 5]
