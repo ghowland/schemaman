@@ -19,7 +19,7 @@ opsdb:
         type: mysql_56
   
   schema_paths:
-    - data/examples/schema/opsdb/opsdb.yaml
+    - data/examples/opsdb/schema/opsdb.yaml
   
   value_type_path: data/schema/value_types/standard__general.yaml
 
