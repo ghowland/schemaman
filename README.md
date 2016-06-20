@@ -15,7 +15,7 @@ Allows versioning data.
 
 Approvals can be required to commit data from a Working Version into the datasource.
 
-## Definitions
+## Version and Change Management Definitions
 
  * **VMCM** - Version Management and Change Management system
  * **Client-Service** - A service (ex: mid-tier) that connects to ChangeIn to handle VMCM

@@ -22,3 +22,33 @@
  * **Value Type** - The type of a value for a Field, such as "Text", "Long Text" or "Decimal".  This is a SchemaMan definition, and will be related to specified Data Source Type definitions such as VARCHAR, TEXT and DECIMAL, etc.
  * **Data Source Value Type** - The specific implemetation of a Value Type in a Data Source.
 
+## Specifications
+
+### dataset_opsdb.yaml
+
+```
+# Can have multiple Data Sets per data set YAML file, they are the top level objects.
+opsdb:
+  name: OpsDB
+  owner_user: ghowland
+  owner_group: ops
+  
+  datasource:
+    type: mysql_56
+    hosts:
+      - id: 1
+        host: somehostname.domain.com
+        port: 3306
+    
+    master_host_id: 1
+```
+
+
+### datasourcetype.yaml
+
+```
+mysql_56:
+  name: MySQL 5.6
+  handler: mysql
+```
+
