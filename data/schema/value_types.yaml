@@ -1,0 +1,42 @@
+int:
+  name: Integer
+  info: Whole numbers
+
+decimal:
+  name: Decimal
+  info: Decimal numbers.  Precise, without floating point less.
+
+name:
+  name: Name of Something
+  info: Label or name of something.  A reasonably short text field.
+
+info:
+  name: Description of something.
+
+text:
+  name: Text
+  info: A good amount of textual data, less than 64K.
+
+longtext:
+  name: Long Text
+  info: More than 64K of textual data.
+
+email:
+  name: Email
+  info: Email Address
+
+url:
+  name: URL
+  info: Universal Resource Locator
+
+string:
+  name: Short string.
+
+blob:
+  name: BLOB
+  info: Binary large object.  Less than 64K.
+
+longblob:
+  name: Long BLOB
+  info: Binary large object.  More than 64K.
+
