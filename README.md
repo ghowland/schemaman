@@ -9,6 +9,8 @@ The focus of SchemaMan is on smaller low-volume data sets, such as found in Syst
 
 ## Version Management
 
+Allows versioning data.
+
 ## Change Managament
 
 ## Security, Owners, and Actions
