@@ -15,6 +15,22 @@ Allows versioning data.
 
 Approvals can be required to commit data from a Working Version into the datasource.
 
+## Definitions
+
+ * VMCM - Version Management and Change Management system
+ * Client-Service - A service (ex: mid-tier) that connects to ChangeIn to handle VMCM
+ * Client-Service User - The user of a Client-Service, which will use the Client-Service directly, but whose authentication information is passed along to ChangeIn to identify their Change Sets.  This might be a human user, or role user, but must be authenticated and have the proper authorization determined by the Client-Service's configuration.
+ * User - Same as Client-Service User. 
+ * Client-Service Configuration - The ChangeIn specific configuration for a given Client-Service.
+ * Working Change Set - A list of record fields that a Client-Service User is making edits to.  These are not applied to any live datasource, and are not integration until all the edits are finished, a Pending Change Set is created, for review.
+ * Pending Change Set - A list of record fields that a Client-Service User has specified as edits in a Working Change Set, and promoted to a Pending Change Set for review.  The approval process starts here.
+ * Approved Change Set - A list of record fields that a Client-Service User promoted to a Pending Change Set, and then all required approvers marked "Approved" moving the state from Pending to Approved.  The next step is Deployed Change Set.
+ * Deployed Change Set - A list of record fields that has been approved.  A Client-Service will need to trigger a Deployment of the changes, which is when the changes are actually applied into the Client-Service's data sources.  Before this point, no data changes were made to the Client-Service's data sources.  This write must be done by the Client-Service itself, as ChangeIn has no knowledge of how this would happen or authorization to perform this work.  Call backs should be implemented for pre- and post- deployment scripts, so that they stages can be processed in ChangeIn, tracking the progress of the work.
+ * Committed Change Set - A list of record fields that has been deployed and written into a Client-Service's data sources.  The committed data is kept in ChangeIn to provide auditing functionality, and also for retrieval for use in Roll Backs.
+ * Collected Change Set - A list of record fields that was either rejected or otherwise brought out of the approval process, but is still collected together for editing purposes.
+ * Approval Group - All record field changes have an Approval Group consisting of 1 or more Approvers, which is provided by the Client-Service at Working Change Set update or before the Pending Change Set promotion through a call to the Client-Service API which takes all the record field changes and returns the list of Approval Groups and Approvers in the ChangeIn specified format.
+ * Approvers - Members of an approval group.  Human or role accounts.  This could also be a Service based authorization, through API call-back.
+
 ## Security, Owners, and Actions
 
 The Change Management can invoke scripts against data for owners, groups to provide security and proper approvals, and can invoke scripts as actions to perform pre- and post- commit work at various levels.
