@@ -1,0 +1,24 @@
+opsdb:
+  name: OpsDB
+  owner_user: ghowland
+  owner_group: ops
+  
+  datasource:
+    type: mysql_56
+    hosts:
+      - id: 1
+        host: somehostname.domain.com
+        port: 3306
+    
+    master_host_id: 1
+    
+    database: opsdb
+    
+    user: roleaccount
+    password_path: data/secure/opsdb_roleaccount.txt
+  
+  schema_paths:
+    - /Users/ghowland/projects/schema/opsdb/opsdb.yaml
+  
+  value_type_path: data/schema/value_types.yaml
+

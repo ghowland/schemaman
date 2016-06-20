@@ -24,7 +24,7 @@
 
 ## Specifications
 
-### dataset_opsdb.yaml
+### Data Set: examples/opsdb/opsdb.yaml
 
 ```
 # Can have multiple Data Sets per data set YAML file, they are the top level objects.
@@ -33,19 +33,19 @@ opsdb:
   owner_user: ghowland
   owner_group: ops
   
+  # Specify the Data Sources 
   datasource:
-    type: mysql_56
+    # All of these database/user/password_path fields can be specified per host as well, which overrides these higher level defaults
+    database: opsdb
+    user: roleaccount
+    password_path: data/secure/opsdb_roleaccount.txt
+    
+    master_host_id: 1
     hosts:
       - id: 1
         host: somehostname.domain.com
         port: 3306
-    
-    master_host_id: 1
-    
-    database: opsdb
-    
-    user: roleaccount
-    password_path: data/secure/opsdb_roleaccount.txt
+        type: mysql_56
   
   schema_paths:
     - /Users/ghowland/projects/schema/opsdb/opsdb.yaml
@@ -54,7 +54,7 @@ opsdb:
 ```
 
 
-### datasourcetype.yaml
+### data_source_types.yaml
 
 ```
 mysql_56:
@@ -63,4 +63,5 @@ mysql_56:
   
   value_type_path: data/schema/value_types/mysql.yaml
 ```
+
 
