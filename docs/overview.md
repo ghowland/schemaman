@@ -94,6 +94,14 @@ longtext:
   name: Long Text
   info: More than 64K of textual data.
 
+ip_v4:
+  name: IP Address v4
+  info: IPv4 Address
+
+ip_v6:
+  name: IP Address v6
+  info: IPv6 Address
+
 email:
   name: Email
   info: Email Address
@@ -145,6 +153,14 @@ text:
 
 longtext:
   type: LONGTEXT
+
+ip_v4:
+  type: VARCHAR
+  args: [31]
+
+ip_v6:
+  type: VARCHAR
+  args: [63]
 
 email:
   type: VARCHAR

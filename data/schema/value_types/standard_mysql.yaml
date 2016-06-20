@@ -24,6 +24,14 @@ text:
 longtext:
   type: LONGTEXT
 
+ip_v4:
+  type: VARCHAR
+  args: [31]
+
+ip_v6:
+  type: VARCHAR
+  args: [63]
+
 email:
   type: VARCHAR
   args: [127]

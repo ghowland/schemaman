@@ -21,6 +21,14 @@ longtext:
   name: Long Text
   info: More than 64K of textual data.
 
+ip_v4:
+  name: IP Address v4
+  info: IPv4 Address
+
+ip_v6:
+  name: IP Address v6
+  info: IPv6 Address
+
 email:
   name: Email
   info: Email Address
