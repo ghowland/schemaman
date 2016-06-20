@@ -45,12 +45,12 @@ opsdb:
     database: opsdb
     
     user: roleaccount
-    password_path: /Users/ghowland/secure/datasource/opsdb_roleaccount.txt
+    password_path: data/secure/opsdb_roleaccount.txt
   
   schema_paths:
     - /Users/ghowland/projects/schema/opsdb/opsdb.yaml
   
-  value_type_path: /Users/ghowland/projects/schema/value_types.yaml
+  value_type_path: data/schema/value_types.yaml
 ```
 
 
@@ -61,6 +61,6 @@ mysql_56:
   name: MySQL 5.6
   handler: mysql
   
-  value_type_path: /Users/ghowland/projects/schema/value_types/mysql.yaml
+  value_type_path: data/schema/value_types/mysql.yaml
 ```
 
