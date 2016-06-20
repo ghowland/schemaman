@@ -64,4 +64,100 @@ mysql_56:
   value_type_path: data/schema/value_types/mysql.yaml
 ```
 
+### Value Types: data/schema/value_types.yaml
 
+```
+pkey:
+  name: Primary Key
+  info: Auto-incrementing integer that specifies this record.
+
+int:
+  name: Integer
+  info: Whole numbers
+
+decimal:
+  name: Decimal
+  info: Decimal numbers.  Precise, without floating point less.
+
+name:
+  name: Name of Something
+  info: Label or name of something.  A reasonably short text field.
+
+info:
+  name: Description of something.
+
+text:
+  name: Text
+  info: A good amount of textual data, less than 64K.
+
+longtext:
+  name: Long Text
+  info: More than 64K of textual data.
+
+email:
+  name: Email
+  info: Email Address
+
+url:
+  name: URL
+  info: Universal Resource Locator
+
+string:
+  name: Short string.
+
+blob:
+  name: BLOB
+  info: Binary large object.  Less than 64K.
+
+longblob:
+  name: Long BLOB
+  info: Binary large object.  More than 64K.
+```
+
+### Data Source Value Types: data/schema/value_types/mysql.yaml
+
+```
+pkey:
+  type: INTEGER
+  args: [11]
+  options: ["PRIMARY KEY", "auto_increment"]
+
+int:
+  type: INTEGER
+  args: [11]
+
+decimal:
+  type: DECIMAL
+  args: [16, 5]
+
+name:
+  type: VARCHAR
+  args: [255]
+
+info:
+  type: TEXT
+
+text:
+  type: TEXT
+
+longtext:
+  type: LONGTEXT
+
+email:
+  type: VARCHAR
+  args: [127]
+
+url:
+  type: VARCHAR
+  args: [511]
+
+string:
+  type: VARCHAR
+  args: [511]
+
+blob:
+  type: BLOB
+
+longblob:
+  type: LONGBLOB
+```
