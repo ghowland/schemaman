@@ -24,7 +24,7 @@
 
 ## Specifications
 
-### Data Set: data/examples/schema/opsdb/opsdb.yaml
+### Data Set: data/examples/opsdb/opsdb.yaml
 
 ```
 # Can have multiple Data Sets per data set YAML file, they are the top level objects.
@@ -48,7 +48,7 @@ opsdb:
         type: mysql_56
   
   schema_paths:
-    - data/examples/schema/opsdb/opsdb.yaml
+    - data/examples/opsdb/schema/opsdb.yaml
   
   value_type_path: data/schema/value_types/standard__general.yaml
 ```
@@ -63,6 +63,30 @@ mysql_56:
   
   value_type_path: data/schema/value_types/standard_mysql.yaml
 ```
+
+### Example:  OpsDB data source schema:  data/examples/schema/opsdb/opsdb.yaml
+
+```
+# Table Schema for a Record
+ip_address_v4:
+  # Ordered Fields in the record
+  - name: id
+    type: pkey
+  
+  - name: ip_address
+    type: ip_v4
+    index: unique
+
+ip_address_v6:
+  id:
+    type: pkey
+  ip_address:
+    type: ip_v6
+    index: unique
+
+
+```
+
 
 ### Value Types: data/schema/value_types/standard__general.yaml
 

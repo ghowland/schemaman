@@ -1,0 +1,17 @@
+# Table Schema for a Record
+ip_address_v4:
+  # Ordered Fields in the record
+  - name: id
+    type: pkey
+  
+  - name: ip_address
+    type: ip_v4
+    index: unique
+
+ip_address_v6:
+  id:
+    type: pkey
+  ip_address:
+    type: ip_v6
+    index: unique
+
