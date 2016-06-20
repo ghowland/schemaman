@@ -47,7 +47,8 @@ opsdb:
     user: roleaccount
     password_path: /Users/ghowland/secure/datasource/opsdb_roleaccount.txt
   
-  schema_path: /Users/ghowland/projects/schema/opsdb/opsdb.yaml
+  schema_paths:
+    - /Users/ghowland/projects/schema/opsdb/opsdb.yaml
 ```
 
 
