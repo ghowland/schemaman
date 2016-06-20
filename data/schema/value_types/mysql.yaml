@@ -28,6 +28,10 @@ email:
   type: VARCHAR
   args: [127]
 
+phone:
+  type: VARCHAR
+  args: [63]
+
 url:
   type: VARCHAR
   args: [511]

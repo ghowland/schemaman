@@ -25,6 +25,9 @@ email:
   name: Email
   info: Email Address
 
+phone:
+  name: Phone Number
+
 url:
   name: URL
   info: Universal Resource Locator

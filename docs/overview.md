@@ -98,6 +98,9 @@ email:
   name: Email
   info: Email Address
 
+phone:
+  name: Phone Number
+
 url:
   name: URL
   info: Universal Resource Locator
@@ -146,6 +149,10 @@ longtext:
 email:
   type: VARCHAR
   args: [127]
+
+phone:
+  type: VARCHAR
+  args: [63]
 
 url:
   type: VARCHAR
