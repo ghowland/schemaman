@@ -49,6 +49,8 @@ opsdb:
   
   schema_paths:
     - /Users/ghowland/projects/schema/opsdb/opsdb.yaml
+  
+  value_type_path: /Users/ghowland/projects/schema/value_types.yaml
 ```
 
 
@@ -58,5 +60,7 @@ opsdb:
 mysql_56:
   name: MySQL 5.6
   handler: mysql
+  
+  value_type_path: /Users/ghowland/projects/schema/value_types/mysql.yaml
 ```
 
