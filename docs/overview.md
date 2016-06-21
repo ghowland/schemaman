@@ -34,7 +34,7 @@ opsdb:
   owner_user: ghowland
   owner_group: ops
   
-  # Specify the Data Sources 
+  # Specify the Data Sources
   datasource:
     # All of these database/user/password_path fields can be specified per host as well, which overrides these higher level defaults
     database: opsdb

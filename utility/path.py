@@ -24,5 +24,5 @@ def LoadYaml(path, use_cache=True):
 
 def SaveYaml(path, data):
   """Save data in YAML format."""
-  yaml.dump(data, open(path, 'w'))
+  yaml.safe_dump(data, open(path, 'w'))
 
