@@ -38,5 +38,5 @@ vi $SCHEMA_DIR/schema/*.yaml
 ./schemaman.py schema update $SCHEMA_DIR
 ```
 
-### 6. 
+### 6. Start using your database through SchemaMan
 
