@@ -36,7 +36,7 @@ The Change Management can invoke scripts against data for owners, groups to prov
 Schema Actions:
 
   info                                       Print info on current schema directory
-  init <path>                                Initialize a path for new schemas
+  init <path>                                Initialize a path for new data set schema
   schema create <schema>                     Create a schema interactively
   schema export <schema> <source>            Export a database schema from a source
   schema update <schema> <source> <target>   Migrate schema/data from source to target
