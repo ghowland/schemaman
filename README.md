@@ -60,3 +60,7 @@ Options:
   -v, --verbose                       Verbose output
 ```
 
+# Docs
+
+ * [docs/overview.md][Overview]
+ * [docs/getting_started.md][Getting Started]
