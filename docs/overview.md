@@ -83,8 +83,6 @@ ip_address_v6:
   ip_address:
     type: ip_v6
     index: unique
-
-
 ```
 
 
