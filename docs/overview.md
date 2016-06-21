@@ -64,7 +64,7 @@ mysql_56:
   value_type_path: data/schema/value_types/standard_mysql.yaml
 ```
 
-### Example:  OpsDB data source schema:  data/examples/schema/opsdb/opsdb.yaml
+### Example:  OpsDB data source schema:  data/examples/opsdb/schema/opsdb.yaml
 
 ```
 # Table Schema for a Record
@@ -75,14 +75,14 @@ ip_address_v4:
   
   - name: ip_address
     type: ip_v4
-    index: unique
+    unique: true
 
 ip_address_v6:
   id:
     type: pkey
   ip_address:
     type: ip_v6
-    index: unique
+    unique: true
 ```
 
 

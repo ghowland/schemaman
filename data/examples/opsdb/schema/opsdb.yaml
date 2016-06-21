@@ -6,12 +6,12 @@ ip_address_v4:
   
   - name: ip_address
     type: ip_v4
-    index: unique
+    unique: true
 
 ip_address_v6:
   id:
     type: pkey
   ip_address:
     type: ip_v6
-    index: unique
+    unique: true
 
