@@ -18,6 +18,7 @@ Copyright Geoff Howland, 2014.  MIT License.
 import sys
 import os
 import getopt
+import pprint
 
 import utility
 from utility.log import Log
@@ -34,16 +35,23 @@ def ProcessAction(action, action_args, command_options):
   
   # If Action is info
   if action == 'info':
-    if action_args:
-      Usage('info action does not take any arguments: %s' % action_args)
-      
-      #TODO(g): Take a path, and give the information on the schemas inside that path
-      pass
+    if len(action_args) == 0:
+      Usage('"init" action requires 1 argument: path schema definition YAML')
+    elif not os.path.isfile(action_args[0]):
+      Usage('"init" action requires arguments: %s: Is not a file' % action_args[0])
+    
+    schema_path = action_args[0]
+    
+    data = LoadYaml(schema_path)
+    
+    print '\nSchema Specification:\n'
+    pprint.pprint(data)
+    print
   
   # Else, Initialize a directory to be a SchemaMan location
   elif action == 'init':
     if len(action_args) == 0:
-      Usage('"init" action requires 1 argument: director to store schema definition inside of')
+      Usage('"init" action requires 1 argument: directory to store schema definition inside of')
     elif not os.path.isdir(action_args[0]):
       Usage('"init" action requires arguments: %s: Is not a directory' % action_args[0])
     
@@ -86,7 +94,7 @@ def ProcessAction(action, action_args, command_options):
       'schema_paths': [schema_record_path],
       'value_type_path': 'data/schema/value_types/standard.yaml',
     }
-  
+    
     # Create the schema files.  Should these get corrected names?  It's always schema.yaml in the schema definition directory.  Makes it standardized.  Keep it simpler.  Or use the actual YAML path...
     schema_data = {data['alias']: formatted_data}
     
