@@ -62,5 +62,5 @@ Options:
 
 # Docs
 
- * [docs/overview.md][Overview]
- * [docs/getting_started.md][Getting Started]
+ * [Overview](docs/overview.md)
+ * [Getting Started](docs/getting_started.md)
