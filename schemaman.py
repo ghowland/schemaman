@@ -50,7 +50,9 @@ def ProcessAction(action, action_args, command_options):
     # Check to see if we havent already created this schema definition.  We don't allow init twice, let them clean it up.
     pass
   
-    # Create the schema files.  Should these get corrected names?
+    # Create the schema files.  Should these get corrected names?  It's always schema.yaml in the schema definition directory.  Makes it standardized.  Keep it simpler.  Or use the actual YAML path...
+    
+    
   
   # Else, if Action prefix is Schema
   elif action == 'schema':

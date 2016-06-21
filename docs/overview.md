@@ -24,7 +24,7 @@
 
 ## Specifications
 
-### Data Set: data/examples/opsdb/schema.yaml
+### Data Set: data/examples/opsdb/opsdb.yaml
 
 ```
 # Can have multiple Data Sets per data set YAML file, they are the top level objects.
