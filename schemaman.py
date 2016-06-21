@@ -20,15 +20,16 @@ import os
 import getopt
 
 import utility
-from utility.log import log
+from utility.log import Log
 from utility.error import Error
 from utility.path import *
+
+# All the datasource stuff is wrapped under this
+import datasource
 
 
 def ProcessAction(action, action_args, command_options):
   """Process the specified action, by it's action arguments.  Using command options."""
-  # Get the Datasource Handler
-  datasource_handler = GetDatasourceHandler()
   
   # If Action is info
   if action == 'info':
@@ -37,22 +38,34 @@ def ProcessAction(action, action_args, command_options):
   
   # Else, Initialize a directory to be a SchemaMan location
   elif action == 'init':
+    if len(action_args) == 0:
+      Usage('"init" action requires arguments: path of schema definition')
+    elif os.path.isdir(action_args[0]):
+      Usage('"init" action requires arguments: %s: Is not a directory' % action_args[0])
+    
+    schema_path = action_args[0]
+    
+    Log('Initializing Schema Definition Path: %s' % schema_path)
+    
+    # Check to see if we havent already created this schema definition.  We don't allow init twice, let them clean it up.
     pass
+  
+    # Create the schema files.  Should these get corrected names?
   
   # Else, if Action prefix is Schema
   elif action == 'schema':
     if len(action_args) == 0:
       Usage('"schema" action requires arguments: create, export, migrate')
     elif action_args[0] == 'create':
-      result = datasource_handler.CreateSchema()
+      result = datasource.CreateSchema()
     
     elif action_args[0] == 'export':
-      result = datasource_handler.ExportSchema()
+      result = datasource.ExportSchema()
     
     elif action_args[0] == 'migrate':
       # Export from one, and import to another, in one step
-      source_result = datasource_handler.ExportSchema()
-      target_result = datasource_handler.UpdateSchema(source_result)
+      source_result = datasource.ExportSchema()
+      target_result = datasource.UpdateSchema(source_result)
     
     # ERROR
     else:
@@ -64,10 +77,10 @@ def ProcessAction(action, action_args, command_options):
     if len(action_args) == 0:
       Usage('"data" action requires arguments: export, import')
     elif action_args[0] == 'export':
-      result = datasource_handler.ExportData()
+      result = datasource.ExportData()
     
     elif action_args[0] == 'import':
-      result = datasource_handler.ImportData()
+      result = datasource.ImportData()
     
     # ERROR
     else:
@@ -75,19 +88,19 @@ def ProcessAction(action, action_args, command_options):
   
   # Put
   elif action == 'put':
-    result = datasource_handler.Put()
+    result = datasource.Put()
   
   # Get
   elif action == 'get':
-    result = datasource_handler.Get()
+    result = datasource.Get()
   
   # Filter
   elif action == 'filter':
-    result = datasource_handler.Filter()
+    result = datasource.Filter()
   
   # Delete
   elif action == 'delete':
-    result = datasource_handler.Delete()
+    result = datasource.Delete()
   
   # ERROR
   else:
