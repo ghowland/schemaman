@@ -50,7 +50,7 @@ opsdb:
   schema_paths:
     - data/examples/opsdb/schema/opsdb.yaml
   
-  value_type_path: data/schema/value_types/standard__general.yaml
+  value_type_path: data/schema/value_types/standard.yaml
 ```
 
 
@@ -61,7 +61,7 @@ mysql_56:
   name: MySQL 5.6
   handler: mysql
   
-  value_type_path: data/schema/value_types/standard_mysql.yaml
+  value_type_path: data/schema/value_types/mysql/standard.yaml
 ```
 
 ### Example:  OpsDB data source schema:  data/examples/opsdb/schema/opsdb.yaml
@@ -86,7 +86,7 @@ ip_address_v6:
 ```
 
 
-### Value Types: data/schema/value_types/standard__general.yaml
+### Value Types: data/schema/value_types/standard.yaml
 
 ```
 pkey:
@@ -159,7 +159,7 @@ longblob:
   info: Binary large object.  More than 64K.
 ```
 
-### Data Source Value Types: data/schema/value_types/mysql.yaml
+### Data Source Value Types: data/schema/value_types/mysql/standard.yaml
 
 ```
 pkey:
