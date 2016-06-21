@@ -36,6 +36,9 @@ def ProcessAction(action, action_args, command_options):
   if action == 'info':
     if action_args:
       Usage('info action does not take any arguments: %s' % action_args)
+      
+      #TODO(g): Take a path, and give the information on the schemas inside that path
+      pass
   
   # Else, Initialize a directory to be a SchemaMan location
   elif action == 'init':

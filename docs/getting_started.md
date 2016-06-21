@@ -2,6 +2,8 @@
 
 ## Creating a configuration from an existing database
 
+### 0. Login as the user who should own the SchemaMan configuration files
+
 ### 1. Create a directory where new schema files will be created, and set it into a variable we can use
 
 ```
