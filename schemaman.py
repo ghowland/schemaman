@@ -23,9 +23,53 @@ import utility
 from utility.log import Log
 from utility.error import Error
 from utility.path import *
+from utility.input import *
+
 
 # All the datasource stuff is wrapped under this
 import datasource
+
+
+def ReplaceUncleanChars(text, replacement_char='_'):
+  unclean_chars = ' \t:;\'",.<>/?=+[]{}-`~!@#$%^&*()'
+  
+  for char in unclean_chars:
+    text = text.replace(char, replacement_char)
+  
+  return text
+
+
+def CollectInitializationDataFromInput():
+  """Collect information about this schema from the user interactively via stdin."""
+  data = {}
+  
+  
+  # Get the Schema Alias
+  done = False
+  while not done:
+    if 'alias' not in data:
+      print 'Schema Aliases should not have any spaces or capital letters, as they will be used as YAML file names, and in other places as variables.'
+
+      initial_alias = ReadLine('Enter an alias: ')
+    
+    else:
+      print 'Schema Alias: %s' % data['alias']
+      print 'Hit enter (blank entry) if this is OK, or enter a new Schema Alias'
+      initial_alias = ReadLine('Enter an updated alias or enter to accept: ')
+    
+    if initial_alias.strip():
+      # Lower, strip and clean characterse for the alias
+      data['alias'] = ReplaceUncleanChars(initial_alias.lower().strip())
+      
+      if initial_alias != data['alias']:
+        print '\nThe Schema Alias has been re-written as this: %s' % data['alias']
+    
+    elif 'alias' in data:
+      done = True
+      
+  
+  
+  return data
 
 
 def ProcessAction(action, action_args, command_options):
@@ -39,20 +83,30 @@ def ProcessAction(action, action_args, command_options):
   # Else, Initialize a directory to be a SchemaMan location
   elif action == 'init':
     if len(action_args) == 0:
-      Usage('"init" action requires arguments: path of schema definition')
-    elif os.path.isdir(action_args[0]):
+      Usage('"init" action requires 1 argument: director to store schema definition inside of')
+    elif not os.path.isdir(action_args[0]):
       Usage('"init" action requires arguments: %s: Is not a directory' % action_args[0])
     
-    schema_path = action_args[0]
+    schema_dir = action_args[0]
     
-    Log('Initializing Schema Definition Path: %s' % schema_path)
+    Log('Initializing Schema Definition Directory: %s' % schema_dir)
+    
+    # Collect the initialization data from the user
+    initialization_data = CollectInitializationDataFromInput()
+    
+    schema_path = '%s/%s.yaml' % (schema_dir, initialization_data['alias'])
     
     # Check to see if we havent already created this schema definition.  We don't allow init twice, let them clean it up.
-    pass
+    if os.path.exists(schema_path):
+      Error('The file you requested to initialize already exists, choose another Schema Alias: %s' % schema_path)
   
     # Create the schema files.  Should these get corrected names?  It's always schema.yaml in the schema definition directory.  Makes it standardized.  Keep it simpler.  Or use the actual YAML path...
+    output_data = {initialization_data['alias']: initialization_data}
     
+    SaveYaml(schema_path, output_data)
     
+    Log('Initialized new schema path: %s' % schema_path)
+  
   
   # Else, if Action prefix is Schema
   elif action == 'schema':
@@ -107,6 +161,18 @@ def ProcessAction(action, action_args, command_options):
   # ERROR
   else:
     Usage('Unknown action: %s' % action)
+
+
+
+def Error(error, exit_code=1):
+  """Error and exit."""
+  output = ''
+  
+  output += '\nerror: %s\n' % error
+  
+  sys.stdout.write(output)
+  
+  sys.exit(exit_code)
 
 
 def Usage(error=None):
