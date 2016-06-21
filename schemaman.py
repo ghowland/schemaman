@@ -60,8 +60,35 @@ def ProcessAction(action, action_args, command_options):
     if os.path.exists(schema_path):
       Error('The file you requested to initialize already exists, choose another Schema Alias: %s' % schema_path)
   
+    # Create the location for our schema record paths.  This is the specific data source record schema, whereas the schema_path is the definition for the data set
+    schema_record_path = '%s/schema/%s.yaml' % (schema_dir, data['alias'])
+    
+    # Format the data into the expandable schema format (we accept lots more data, but on init we just want 1 set of data)
+    formatted_data = {
+      'alias': data['alias'],
+      'name': data['name'],
+      'owner_user': data['owner_user'],
+      'owner_group': data['owner_group'],
+      'datasource': {
+        'database': data['database_name'],
+        'user': data['database_user'],
+        'password_path': data['database_password_path'],
+        'master_host_id': 1,
+        'hosts': [
+          {
+            'id': 1,
+            'host': data['database_host'],
+            'port': data['database_port'],
+            'type': data['database_type'],
+          },
+        ],
+      },
+      'schema_paths': [schema_record_path],
+      'value_type_path': 'data/schema/value_types/standard.yaml',
+    }
+  
     # Create the schema files.  Should these get corrected names?  It's always schema.yaml in the schema definition directory.  Makes it standardized.  Keep it simpler.  Or use the actual YAML path...
-    schema_data = {data['alias']: data}
+    schema_data = {data['alias']: formatted_data}
     
     SaveYaml(schema_path, schema_data)
     
