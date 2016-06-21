@@ -1,6 +1,5 @@
 # SchemaMan
 
-
 SchemaMan is a schema manager for multiple databases, so that schema confguration can be stored in meta data files, and applied equally to any database.
 
 SchemaMan can be used as a generic wrapper for working with databases, or migrating data between databases, who have SchemaMan schemas defined.
