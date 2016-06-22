@@ -3,7 +3,6 @@ Format data for various data source operations.  Pre-query or post-query.
 """
 
 
-
 def FormatStringOrNullFromDict(data, key, strict=False):
   """Returns a quoted and escaped string from the data[key] value, or NULL to insert into a field column
   

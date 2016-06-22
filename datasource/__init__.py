@@ -11,7 +11,6 @@ import utility
 import mysql
 
 
-
 def DetermineHandlerModule(dataset):
   """Returns the handler module, which can handle these requests."""
   
@@ -130,6 +129,4 @@ def DeleteFilter():
   handler = DetermineHandlerModule(dataset)
   
   handler.DeleteFilter(dataset, data)
-
-
 

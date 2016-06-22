@@ -51,6 +51,9 @@ def ProcessAction(action, action_args, command_options):
     print '\nSchema Specification:\n'
     pprint.pprint(data)
     print
+    
+    # Attempt to connect to the DB to test it
+    
   
   
   # Else, Initialize a directory to be a SchemaMan location
