@@ -30,6 +30,10 @@ from utility.path import *
 import datasource
 
 
+# Mode for directories we create.
+MODE_DIRECTORY = 0755
+
+
 def ProcessAction(action, action_args, command_options):
   """Process the specified action, by it's action arguments.  Using command options."""
   
@@ -47,6 +51,7 @@ def ProcessAction(action, action_args, command_options):
     print '\nSchema Specification:\n'
     pprint.pprint(data)
     print
+  
   
   # Else, Initialize a directory to be a SchemaMan location
   elif action == 'init':
@@ -70,6 +75,20 @@ def ProcessAction(action, action_args, command_options):
   
     # Create the location for our schema record paths.  This is the specific data source record schema, whereas the schema_path is the definition for the data set
     schema_record_path = '%s/schema/%s.yaml' % (schema_dir, data['alias'])
+    
+    
+    # We need to create this directory, if it doesnt exist
+    schema_record_path_dir = os.path.dirname(schema_record_path)
+    if not os.path.isdir(schema_record_path_dir):
+      os.makedirs(schema_record_path_dir, mode=MODE_DIRECTORY)
+    
+    
+    # If we dont have this file yet, create it, so we can write into it
+    if not os.path.isfile(schema_record_path):
+      with open(schema_record_path, 'w') as fp:
+        # Write an empty dictionary for YAML
+        fp.write('{}\n')
+    
     
     # Format the data into the expandable schema format (we accept lots more data, but on init we just want 1 set of data)
     formatted_data = {
