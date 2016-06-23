@@ -2,12 +2,15 @@
 Datasource Module
 """
 
+import os
 import threading
 
 
-# Schema Datasource Utility functions
-import utility
+from utility.error import *
+from utility.path import *
 
+# Schema Datasource Utility functions
+import tools
 
 # Data Source Type handlers
 import mysql
@@ -21,6 +24,20 @@ GLOBAL_REQUEST_COUNTER_LOCK = threading.Lock()
 # ----  This needs to be transactional, and user/request based, for the DB connection pooling ------ #
 #     Pass in a request number, which will differentiate different user requests.
 #     
+
+
+def LoadConnectionSpec(path):
+  """Load the connection specification."""
+  if not os.path.isfile(path):
+    Error('Connection path specified does not exist: %s' % path)
+  
+  try:
+    data = LoadYaml(path)
+    
+  except Exception, e:
+    Error('Could not load connection spec YAML: %s: %s' % (path, e))
+  
+  return data
 
 
 def DetermineHandlerModule(connection_data, request_number, server_id=None):

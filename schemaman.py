@@ -21,32 +21,17 @@ import os
 import getopt
 import pprint
 
+# SchemaMan modules
 import utility
 from utility.log import Log
-from utility.error import Error
+from utility.error import *
 from utility.path import *
-
-
-# All the datasource stuff is wrapped under this
 import datasource
+import action as action_module
 
 
 # Mode for directories we create.
 MODE_DIRECTORY = 0755
-
-
-def LoadConnectionSpec(path):
-  """Load the connection specification."""
-  if not os.path.isfile(path):
-    Error('Connection path specified does not exist: %s' % path)
-  
-  try:
-    data = LoadYaml(path)
-    
-  except Exception, e:
-    Error('Could not load connection spec YAML: %s: %s' % (path, e))
-  
-  return data
 
 
 def ProcessAction(action, action_args, command_options):
@@ -61,7 +46,7 @@ def ProcessAction(action, action_args, command_options):
     
     schema_path = action_args[0]
     
-    connection_data = LoadConnectionSpec(schema_path)
+    connection_data = datasource.LoadConnectionSpec(schema_path)
     
     print '\nConnection Specification:\n\n%s\n' % pprint.pformat(connection_data)
     print '\nTesting Connection:\n'
@@ -81,7 +66,7 @@ def ProcessAction(action, action_args, command_options):
     
     schema_path = action_args[0]
     
-    connection_data = LoadConnectionSpec(schema_path)
+    connection_data = datasource.LoadConnectionSpec(schema_path)
 
     # Get all the args after the initial 3 args and use them as input for our Action function
     action_input_args = action_args[3:]
@@ -93,8 +78,10 @@ def ProcessAction(action, action_args, command_options):
     if action_args[1] == 'populate':
       # Action
       if action_args[2] == 'schema_into_db':
-        print '\nTesting Connection:\n'
-        result = action.populate.schema_into_db.Action(connection_data, action_input_args)
+        if len(action_input_args) != 1:
+          Error('action: populate: schema_into_db: Takes 1 argument: <path to target schema defintion YAML>')
+        
+        result = action_module.populate.schema_into_db.Action(connection_data, action_input_args)
         print result
       
       else:
@@ -178,7 +165,7 @@ def ProcessAction(action, action_args, command_options):
     
     
     elif action_args[0] == 'create':
-      connection_data = LoadConnectionSpec(action_args[1])
+      connection_data = datasource.LoadConnectionSpec(action_args[1])
       
       result = datasource.CreateSchema(connection_data)
     
@@ -188,7 +175,7 @@ def ProcessAction(action, action_args, command_options):
       if len(action_args) == 3:
         Usage('"schema export" action requires arguments: <path to connection spec> <path to export data to>')
       
-      connection_data = LoadConnectionSpec(action_args[1])
+      connection_data = datasource.LoadConnectionSpec(action_args[1])
       
       target_path = action_args[2]
       
@@ -203,7 +190,7 @@ def ProcessAction(action, action_args, command_options):
       if len(action_args) == 1:
         Usage('"schema extract" action requires arguments: <path to connection spec>')
       
-      connection_data = LoadConnectionSpec(action_args[1])
+      connection_data = datasource.LoadConnectionSpec(action_args[1])
       
       result = datasource.ExtractSchema(connection_data)
       
@@ -226,7 +213,7 @@ def ProcessAction(action, action_args, command_options):
     
     # Update the database based on our schema spec files
     elif action_args[0] == 'update':
-      connection_data = LoadConnectionSpec(action_args[1])
+      connection_data = datasource.LoadConnectionSpec(action_args[1])
       
       result = datasource.UpdateSchema(connection_data)
     
@@ -269,72 +256,6 @@ def ProcessAction(action, action_args, command_options):
   # ERROR
   else:
     Usage('Unknown action: %s' % action)
-
-
-
-def Error(error, exit_code=1):
-  """Error and exit."""
-  output = ''
-  
-  output += '\nerror: %s\n' % error
-  
-  sys.stdout.write(output)
-  
-  sys.exit(exit_code)
-
-
-def Usage(error=None):
-  """Print usage information, any errors, and exit.  
-
-  If errors, exit code = 1, otherwise 0.
-  """
-  output = ''
-  
-  if error:
-    output += '\nerror: %s\n' % error
-    exit_code = 1
-  else:
-    exit_code = 0
-  
-  output += '\n'
-  output += 'usage: %s [options] action <action_args>' % os.path.basename(sys.argv[0])
-  output += '\n'
-  output += 'Schema Actions:\n'
-  output += '\n'
-  output += '  info                                       Print info on current schema directory\n'
-  output += '  init <path>                                Initialize a path for new schemas\n'
-  output += '  schema create <schema>                     Create a schema interactively\n'
-  output += '  schema export <schema> <source>            Export a database schema from a source\n'
-  output += '  schema update <schema> <source> <target>   Migrate schema/data from source to target\n'
-  output += '  data export <schema> <source>              Export all the data from the schema/source\n'
-  output += '  data import <schema> <source>              Import data into the schema/source\n'
-  output += '\n'
-  output += 'Data Actions:\n'
-  output += '\n'
-  output += '  put <schema> <source> <json>        Put JSON data into a Schema instance\n'
-  output += '  get <schema> <source> <json>        Get Schema instance records from JSON keys\n'
-  output += '  filter <schema> <source> <json>     Filter Schema instance records\n'
-  output += '  delete <schema> <source> <json>     Delete records from Schema instance\n'
-  output += '\n'
-  output += 'Options:\n'
-  output += '\n'
-  output += '  -d <path>, --dir=<path>             Directory for SchemaMan data/conf/schemas\n'
-  output += '                                          (Default is current working directory)\n'
-  output += '  -y, --yes                           Answer Yes to all prompts\n'
-  output += '\n'
-  output += '  -h, -?, --help                      This usage information\n'
-  output += '  -v, --verbose                       Verbose output\n'
-  output += '\n'
-  
-  
-  # STDOUT - Non-error exit
-  if exit_code == 0:
-    sys.stdout.write(output)
-  # STDERR - Failure exit
-  else:
-    sys.stderr.write(output)
-  
-  sys.exit(exit_code)
 
 
 def Main(args=None):
