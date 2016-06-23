@@ -67,17 +67,17 @@ def Action(connection_data, action_input_args):
   
   
   # Get the existing entry for this, if it exists
-  schema_database = datasource.Filter(target_connection_data, data['table_database'], {'name':data['table_database']}, request_number=request_number)
+  schema_database_list = datasource.Filter(target_connection_data, data['table_database'], {'name':data['table_database']}, request_number=request_number)
   
-  print 'Filter: Schema DB: %s' % schema_database
+  print 'Filter: Schema DB: %s' % schema_database_list
   
   # If we dont already have this record
-  if not schema_database:
+  if not schema_database_list:
     # Create it, and get it's record again so we have it's ID
-    record = {'name':data['table_database'], 'mysql_user':connection_data['datasource']['user'],
-              'mysql_password_path':connection_data['datasource']['password_path'],
-              'mysql_hostname':connection_data['datasource']['servers'][0]['host']}
-    schema_database_id = datasource.Set(target_connection_data, data['table_database'], record, request_number=request_number)
+    schema_record = {'name':data['table_database'], 'mysql_user':connection_data['datasource']['user'],
+                     'mysql_password_path':connection_data['datasource']['password_path'],
+                     'mysql_hostname':connection_data['datasource']['servers'][0]['host']}
+    schema_database_id = datasource.Set(target_connection_data, data['table_database'], schema_record, request_number=request_number)
     
     print 'Created record: %s' % schema_database_id
     
@@ -86,17 +86,51 @@ def Action(connection_data, action_input_args):
 
     print 'Fetched record: %s' % schema_database
   
+  else:
+    schema_database = schema_database_list[0]
+  
   
   # Loop over all our tables
   for (table, table_data) in schema.items():
     print 'Populating Schema for Table: %s' % table
+
+    table_record = {'name':table, 'schema_id':schema_database['id']}
+    schema_table_list = datasource.Filter(target_connection_data, data['table_table'], table_record, request_number=request_number)
+    
+    # If we dont have this table, create it
+    if not schema_table_list:
+      schema_table_id = datasource.Set(target_connection_data, data['table_table'], table_record, request_number=request_number)
+    
+    else:
+      schema_table_id = schema_table_list[0]['id']
     
     for (field, field_data) in table_data.items():
       print 'Populating Schema for Field: %s: %s' % (table, field)
+    
+      field_record = {'name':field, 'schema_table_id':schema_table_id}
+      schema_field_list = datasource.Filter(target_connection_data, data['table_field'], field_record, request_number=request_number)
+      
+      # If we dont have this table, create it
+      if not schema_field_list:
+        # Determine the Value Type ID
+        #TODO(g): This isnt always part of the process...  We need some other way to do this update, and a post-script or something...?
+        if field_data['type'] == 'int':
+          value_type_id = 2
+        elif field_data['type'] == 'varchar':
+          value_type_id = 1
+        elif field_data['type'] == 'text':
+          value_type_id = 1
+        else:
+          raise Exception('Unknown value type: %s' % field_data['type'])
+        
+        if field.endswith('data_json'):
+          value_type_id = 11
+        
+        # We want to set all the data, we only wanted to search and table/fieldname
+        field_record = {'name':field, 'schema_table_id':schema_table_id, 'is_primary_key':field_data['pkey'],
+                        'allow_null':field_data['allow_null'], 'default_value':field_data['default'], 'value_type_id':value_type_id}
+        schema_field_id = datasource.Set(target_connection_data, data['table_field'], field_record, request_number=request_number)
+    
+    
   
   
-  
-  
-  
-  
-
