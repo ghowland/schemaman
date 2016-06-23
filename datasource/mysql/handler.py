@@ -6,10 +6,16 @@ Handle all SchemaMan datasource specific functions: MySQL
 from query import *
 
 
-def TestConnection(connection_data):
+def TestConnection(connection_data, request_number):
   """Create a schema, based on a spec"""
   
-  print 'MySQL: Test Connection'
+  print 'MySQL: Test Connection: %s: %s' % (connection_data['alias'], request_number)
+  
+  connection = GetConnection(connection_data, request_number, server_id=None)
+  
+  result = connection.Query('SELECT 1')
+  
+  return result
 
 
 def CreateSchema():
