@@ -7,11 +7,12 @@ SchemaMan - Schema Manager.  Cross database schema revision control, data migrat
 - Use as a cross-database method of interacting with data (insert/update/delete/get/filter).
 - Migrate data between different databases (same or different database software), using rules to update schema, data, or a
     combination.
+- Version Management of all data put into the system (unless skipped)
+- Change Management of Version Management commits (done through a series of Action scripts, so highly configurable)
 
 Intended for use on smaller data sets, such as those found in System and Network Operational Configuration Management systems.
 
 Copyright Geoff Howland, 2014.  MIT License.
-
 """
 
 
@@ -36,7 +37,14 @@ MODE_DIRECTORY = 0755
 
 def LoadConnectionSpec(path):
   """Load the connection specification."""
-  data = LoadYaml(path)
+  if not os.path.isfile(path):
+    Error('Connection path specified does not exist: %s' % path)
+  
+  try:
+    data = LoadYaml(path)
+    
+  except Exception, e:
+    Error('Could not load connection spec YAML: %s: %s' % (path, e))
   
   return data
 
@@ -53,14 +61,16 @@ def ProcessAction(action, action_args, command_options):
     
     schema_path = action_args[0]
     
-    data = LoadYaml(schema_path)
+    connection_data = LoadConnectionSpec(schema_path)
     
-    print '\nSchema Specification:\n'
-    pprint.pprint(data)
-    print
+    print '\nConnection Specification:\n%s\n' % pprint.pformat(connection_data)
+    
+    print '\nTesting Connection:\n'
     
     # Attempt to connect to the DB to test it
+    result = datasource.TestConnection(connection_data)
     
+    print result
   
   
   # Else, Initialize a directory to be a SchemaMan location
@@ -144,15 +154,24 @@ def ProcessAction(action, action_args, command_options):
     
     # Export the current DB schema to a specified data source
     elif action_args[0] == 'export':
+      if len(action_args) == 3:
+        Usage('"schema export" action requires arguments: <path to connection spec> <path to export data to>')
+      
       connection_data = LoadConnectionSpec(action_args[1])
       
       target_path = action_args[2]
+      
+      if not os.path.isdir(os.path.dirname(target_path)):
+        Usage('Path specified does not have a valid directory: %s' % target_path)
       
       result = datasource.ExportSchema(connection_data, target_path)
     
     
     # Extract is the opposite of "update", and will get our DB schema and put it into our files where we "update" from
     elif action_args[0] == 'extract':
+      if len(action_args) == 2:
+        Usage('"schema extract" action requires arguments: <path to connection spec>')
+      
       connection_data = LoadConnectionSpec(action_args[1])
       
       result = datasource.ExtractSchema(connection_data)

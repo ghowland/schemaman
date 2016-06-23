@@ -20,7 +20,7 @@ def DetermineHandlerModule(connection_data, server_id=None):
   """Returns the handler module, which can handle these requests."""
   # If we didnt have a server_id specified, use the master_server_id
   if server_id == None:
-    server_id = connection_data['master_server_id']
+    server_id = connection_data['datasource']['master_server_id']
   
   # Find the master host, which we will assume we are connecting to for now
   #TODO(g): Specify which host in this Set
@@ -29,6 +29,7 @@ def DetermineHandlerModule(connection_data, server_id=None):
     if host_data['id'] == server_id:
       found_host = host_data
       break
+  
   
   if not found_host:
     raise Exception('Could not find server ID in list of servers: %s' % server_id)
@@ -40,6 +41,13 @@ def DetermineHandlerModule(connection_data, server_id=None):
   
   
   raise Exception('Unknown Data Source Type: %s' % connection_data['type'])
+
+
+def TestConnection(connection_data):
+  """Connect to the datasource's database and ensure we can read from it."""
+  handler = DetermineHandlerModule(connection_data)
+  
+  handler.TestConnection(connection_data)
 
 
 def CreateSchema(connection_data, schema):

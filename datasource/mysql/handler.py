@@ -6,6 +6,12 @@ Handle all SchemaMan datasource specific functions: MySQL
 from query import *
 
 
+def TestConnection(connection_data):
+  """Create a schema, based on a spec"""
+  
+  print 'MySQL: Test Connection'
+
+
 def CreateSchema():
   """Create a schema, based on a spec"""
   pass
