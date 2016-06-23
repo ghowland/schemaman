@@ -173,11 +173,51 @@ def Filter(connection_data, table, data, request_number):
   """Get 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables'.
-  """
+  """  
+  base_sql = "SELECT * FROM %s WHERE %s"
   
-  print 'TODO(g): Filter database connections: %s: %s' % (table, data)
+  keys = data.keys()
+  keys.sort()
   
-  return []
+  keys_ticked = []
+  where_list = []
+  values = []
+  
+  
+  # Get our backticked wrapped insert keys, our value list, and our update setting
+  for count in range(0, len(keys)):
+    # Skip any fields that are NULL.  They are not helping us here, and cause problems with "=" vs "IS", because SQL implements NULL testing stupidly
+    if data[keys[count]] == None:
+      continue
+    
+    # Back tick column names
+    ticked_key = '`%s`' % keys[count]
+    keys_ticked.append(ticked_key)
+    
+    # Update keys will reference the insert keys, so we dont have to specify the data twice (SQL does it)
+    #TODO(g): Should I remove the primary key from this?  Not sure it's necessary.  Remove comment when proven it works without removing it (simpler)...
+    where_list.append('%s = %%s' % ticked_key)
+    
+    # Values are passed in separate than the SQL string
+    values.append(data[keys[count]])
+  
+  
+  # Build out strings to insert into our base_sql
+  where_sql = ' AND '.join(where_list)
+  
+  # Create our final SQL
+  sql = base_sql % (table, where_sql)
+  
+  # Log('\n\nGetFromData: %s: %s\nSQL:%s\nValues:%s\n' % (table, data, sql, values))
+  
+  
+  # Get a connection
+  connection = GetConnection(connection_data, request_number, server_id=None)
+  
+  # Query
+  rows = connection.Query(sql, values)
+  
+  return rows
 
 
 def Delete(connection_data, request_number):
