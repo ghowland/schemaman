@@ -54,8 +54,33 @@ def Action(connection_data, action_input_args):
   
   
   # Put these tables for this database into the target schema
-  target_connection_data = action_input_args[0]
+  target_connection_data = datasource.LoadConnectionSpec(action_input_args[0])
   
+  
+  database_name = connection_data['datasource']['database']
+  
+  print 'Populating Schema for Database: %s' % database_name
+  
+  
+  # Get our request number.  We can use this with all data sources.
+  request_number = datasource.GetRequestNumber()
+  
+  
+  # Get the existing entry for this, if it exists
+  schema_database = datasource.Filter(target_connection_data, data['table_database'], {'name':data['table_database']}, request_number=request_number)
+  
+  # If we dont already have this record
+  if not schema_database:
+    # Create it, and get it's record again so we have it's ID
+    pass
+  
+  
+  # Loop over all our tables
+  for (table, table_data) in schema.items():
+    print 'Populating Schema for Table: %s' % table
+    
+    for (field, field_data) in table_data.items():
+      print 'Populating Schema for Field: %s: %s' % (table, field)
   
   
   

@@ -40,21 +40,33 @@ def LoadConnectionSpec(path):
   return data
 
 
-def DetermineHandlerModule(connection_data, request_number, server_id=None):
-  """Returns the handler module, which can handle these requests."""
+def GetRequestNumber():
+  """Returns an int, the next available request number.
+  
+  This number can be used with any number of data sets simultaneously, as it is globally unique, and
+  each database connection will reside in it's own server's pool, so any number of databases
+  can be queried with the same request_number.
+  """
   global GLOBAL_REQUEST_COUNTER
   
+  # Thread safe
+  try:
+    GLOBAL_REQUEST_COUNTER_LOCK.acquire()
+    
+    request_number = GLOBAL_REQUEST_COUNTER
+    GLOBAL_REQUEST_COUNTER += 1
+  
+  finally:
+    GLOBAL_REQUEST_COUNTER_LOCK.release()
+  
+  return GLOBAL_REQUEST_COUNTER
+
+
+def DetermineHandlerModule(connection_data, request_number, server_id=None):
+  """Returns the handler module, which can handle these requests."""
   # Increment the request_number, if we dont already have one
   if request_number == None:
-    # Thread safe
-    try:
-      GLOBAL_REQUEST_COUNTER_LOCK.acquire()
-      
-      request_number = GLOBAL_REQUEST_COUNTER
-      GLOBAL_REQUEST_COUNTER += 1
-    
-    finally:
-      GLOBAL_REQUEST_COUNTER_LOCK.release()
+    request_number = GetRequestNumber()
   
   
   # If we didnt have a server_id specified, use the master_server_id
@@ -157,31 +169,31 @@ def Put(connection_data, data, request_number=None):
   handler.Put(connection_data, data)
 
 
-def Get(schema, source, data, request_number=None):
+def Get(connection_data, table, data, request_number=None):
   """Get (select single record) from this datasource.
   
   Can be a 'view', combining several lower level 'tables'.
   
   Args:
-    schema: dict, ...
-    source: string, ...
+    connection_data: dict, Connection Data for a Schema Data Set
+    table: string, Record table name
     data: dict, ...
   
   Returns: dict, single record key/values
   """
   (handler, request_number) = DetermineHandlerModule(connection_data, request_number)
   
-  handler.Get(connection_data, data)
+  handler.Get(connection_data, table, data, request_number)
 
 
-def Filter(connection_data, request_number=None):
+def Filter(connection_data, table, data, request_number):
   """Get 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables'.
   """
   (handler, request_number) = DetermineHandlerModule(connection_data, request_number)
   
-  handler.Filter(connection_data, data)
+  handler.Filter(connection_data, table, data, request_number)
 
 
 def Delete(connection_data, request_number=None):

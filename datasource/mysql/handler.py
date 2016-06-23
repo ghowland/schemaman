@@ -18,7 +18,7 @@ def TestConnection(connection_data, request_number):
   return result
 
 
-def CreateSchema():
+def CreateSchema(connection_data, request_number):
   """Create a schema, based on a spec"""
   pass
 
@@ -96,12 +96,12 @@ def ExtractSchema(connection_data, request_number):
   return data
 
 
-def ExportSchema():
+def ExportSchema(connection_data, request_number):
   """Export a schema, based on a spec, or everything"""
   pass
 
 
-def UpdateSchema():
+def UpdateSchema(connection_data, request_number):
   """Update a schema, based on a spec.
   
   Can go 'forward' or 'backwards' for version control, its still updating.
@@ -109,12 +109,12 @@ def UpdateSchema():
   pass
 
 
-def ExportData():
+def ExportData(connection_data, request_number):
   """Export/dump data from this datasource, based on spec, or everything"""
   pass
 
 
-def ImportData(drop_first=False, transaction=False):
+def ImportData(connection_data, request_number, drop_first=False, transaction=False):
   """Import/load data to this datasource, based on spec, or everything.
   
   Args:
@@ -129,7 +129,7 @@ def ImportData(drop_first=False, transaction=False):
   pass
 
 
-def Put():
+def Put(connection_data, request_number, record):
   """Put (insert/update) data into this datasource.
   
   Works as a single transaction.
@@ -137,15 +137,16 @@ def Put():
   pass
 
 
-def Get(schema, source, data):
+def Get(connection_data, table, data, request_number):
   """Get (select single record) from this datasource.
   
   Can be a 'view', combining several lower level 'tables'.
   
   Args:
-    schema: dict, ...
-    source: string, ...
+    connection_data: dict, Connection Specificatin for Data Set
+    table: string, ...
     data: dict, ...
+    request_number: int, Transactional request number
   
   Returns: dict, single record key/values
   """
@@ -168,15 +169,18 @@ def Get(schema, source, data):
     raise Exception('No "id" field in data, other methods of selection not yet implemented...')
 
 
-def Filter():
+def Filter(connection_data, table, data, request_number):
   """Get 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables'.
   """
-  pass
+  
+  print 'TODO(g): Filter database connections: %s: %s' % (table, data)
+  
+  return []
 
 
-def Delete():
+def Delete(connection_data, request_number):
   """Delete a single record.
   
   NOTE(g): Processes single record deletes directly, sends fitlered deletes to DeleteFilter()
@@ -184,7 +188,7 @@ def Delete():
   pass
 
 
-def DeleteFilter():
+def DeleteFilter(connection_data, request_number):
   """Delete 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables', which makes it a
