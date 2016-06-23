@@ -63,7 +63,7 @@ def ProcessAction(action, action_args, command_options):
     
     connection_data = LoadConnectionSpec(schema_path)
     
-    print '\nConnection Specification:\n%s\n' % pprint.pformat(connection_data)
+    print '\nConnection Specification:\n\n%s\n' % pprint.pformat(connection_data)
     
     print '\nTesting Connection:\n'
     
