@@ -84,7 +84,9 @@ def ExtractSchema(connection_data, request_number=None):
   """Export a schema, based on a spec, or everything"""
   (handler, request_number) = DetermineHandlerModule(connection_data, request_number)
   
-  handler.ExtractSchema(connection_data, path)
+  result = handler.ExtractSchema(connection_data, request_number)
+  
+  return result
 
 
 def ExportSchema(connection_data, path, request_number=None):

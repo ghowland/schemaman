@@ -175,7 +175,7 @@ def Query(conn, cursor, sql, params=None, commit=True):
 		
 		result = None
 	
-	elif sql.upper().startswith('SELECT') or sql.upper().startswith('SHOW'):
+	elif sql.upper().startswith('SELECT') or sql.upper().startswith('SHOW') or sql.upper().startswith('DESC'):
 		result = cursor.fetchall()
 	
 	else:

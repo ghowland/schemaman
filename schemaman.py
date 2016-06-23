@@ -64,13 +64,44 @@ def ProcessAction(action, action_args, command_options):
     connection_data = LoadConnectionSpec(schema_path)
     
     print '\nConnection Specification:\n\n%s\n' % pprint.pformat(connection_data)
-    
     print '\nTesting Connection:\n'
     
     # Attempt to connect to the DB to test it
     result = datasource.TestConnection(connection_data)
     
     print result
+  
+  
+  # If Action is action:  This is where we dump all kinds of functions, that dont need top-level access.  The long-tail of features.
+  elif action == 'action':
+    if len(action_args) < 3:
+      Usage('"init" action requires at least 3 arguments: <path schema definition YAML> <category> <action>  ...')
+    elif not os.path.isfile(action_args[0]):
+      Usage('"init" action requires arguments: %s: Is not a file' % action_args[0])
+    
+    schema_path = action_args[0]
+    
+    connection_data = LoadConnectionSpec(schema_path)
+
+    # Get all the args after the initial 3 args and use them as input for our Action function
+    action_input_args = action_args[3:]
+    
+    #TODO(g): Turn this into YAML so that we can add into it.  Make sure it's multiple YAML files or something, so people can add their own without impacting the standard ones
+    pass
+    
+    # Category
+    if action_args[1] == 'populate':
+      # Action
+      if action_args[2] == 'schema_into_db':
+        print '\nTesting Connection:\n'
+        result = action.populate.schema_into_db.Action(connection_data, action_input_args)
+        print result
+      
+      else:
+        Usage('Unknown Action in Category: %s: %s' % (action_args[1], action_args[2]))
+    
+    else:
+      Usage('Unknown Category: %s' % action_args[1])
   
   
   # Else, Initialize a directory to be a SchemaMan location
@@ -169,12 +200,22 @@ def ProcessAction(action, action_args, command_options):
     
     # Extract is the opposite of "update", and will get our DB schema and put it into our files where we "update" from
     elif action_args[0] == 'extract':
-      if len(action_args) == 2:
+      if len(action_args) == 1:
         Usage('"schema extract" action requires arguments: <path to connection spec>')
       
       connection_data = LoadConnectionSpec(action_args[1])
       
       result = datasource.ExtractSchema(connection_data)
+      
+      print 'Extract Schema:'
+      
+      pprint.pprint(result)
+      
+      # Save the extracted schema to the last file in the connection data (which updates over the rest)
+      #TODO(g): We should load all the previous files, and then only update things that are already in the current files, and save them, and then add any new things to the last file.
+      output_path = connection_data['schema_paths'][-1]
+      
+      SaveYaml(output_path, result)
     
     
     elif action_args[0] == 'migrate':
