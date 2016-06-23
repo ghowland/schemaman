@@ -193,7 +193,9 @@ def Filter(connection_data, table, data, request_number):
   """
   (handler, request_number) = DetermineHandlerModule(connection_data, request_number)
   
-  handler.Filter(connection_data, table, data, request_number)
+  result = handler.Filter(connection_data, table, data, request_number)
+  
+  return result
 
 
 def Delete(connection_data, request_number=None):

@@ -174,7 +174,7 @@ def Filter(connection_data, table, data, request_number):
   
   Can be a 'view', combining several lower level 'tables'.
   """  
-  base_sql = "SELECT * FROM %s WHERE %s"
+  base_sql = "SELECT * FROM `%s` WHERE %s"
   
   keys = data.keys()
   keys.sort()

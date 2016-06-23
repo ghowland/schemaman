@@ -161,7 +161,7 @@ def GetConnection(connection_data, request_number, server_id=None):
 
 def Query(conn, cursor, sql, params=None, commit=True):
 	"""Query"""
-	cursor.execute(sql)
+	cursor.execute(sql, params)
 	
 	if sql.upper().startswith('INSERT'):
 		result = cursor.lastrowid

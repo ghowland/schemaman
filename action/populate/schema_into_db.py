@@ -69,6 +69,8 @@ def Action(connection_data, action_input_args):
   # Get the existing entry for this, if it exists
   schema_database = datasource.Filter(target_connection_data, data['table_database'], {'name':data['table_database']}, request_number=request_number)
   
+  print 'Filter: Schema DB: %s' % schema_database
+  
   # If we dont already have this record
   if not schema_database:
     # Create it, and get it's record again so we have it's ID
