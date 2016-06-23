@@ -34,6 +34,13 @@ import datasource
 MODE_DIRECTORY = 0755
 
 
+def LoadConnectionSpec(path):
+  """Load the connection specification."""
+  data = LoadYaml(path)
+  
+  return data
+
+
 def ProcessAction(action, action_args, command_options):
   """Process the specified action, by it's action arguments.  Using command options."""
   
@@ -94,7 +101,7 @@ def ProcessAction(action, action_args, command_options):
     
     
     # Format the data into the expandable schema format (we accept lots more data, but on init we just want 1 set of data)
-    formatted_data = {
+    schema_data = {
       'alias': data['alias'],
       'name': data['name'],
       'owner_user': data['owner_user'],
@@ -103,8 +110,8 @@ def ProcessAction(action, action_args, command_options):
         'database': data['database_name'],
         'user': data['database_user'],
         'password_path': data['database_password_path'],
-        'master_host_id': 1,
-        'hosts': [
+        'master_server_id': 1,
+        'servers': [
           {
             'id': 1,
             'host': data['database_host'],
@@ -117,9 +124,6 @@ def ProcessAction(action, action_args, command_options):
       'value_type_path': 'data/schema/value_types/standard.yaml',
     }
     
-    # Create the schema files.  Should these get corrected names?  It's always schema.yaml in the schema definition directory.  Makes it standardized.  Keep it simpler.  Or use the actual YAML path...
-    schema_data = {data['alias']: formatted_data}
-    
     SaveYaml(schema_path, schema_data)
     
     Log('Initialized new schema path: %s' % schema_path)
@@ -127,18 +131,45 @@ def ProcessAction(action, action_args, command_options):
   
   # Else, if Action prefix is Schema
   elif action == 'schema':
+    # Ensure there are sub-actions, as they are always required
     if len(action_args) == 0:
-      Usage('"schema" action requires arguments: create, export, migrate')
-    elif action_args[0] == 'create':
-      result = datasource.CreateSchema()
+      Usage('"schema" action requires arguments: create, export, extract, migrate, update')
     
+    
+    elif action_args[0] == 'create':
+      connection_data = LoadConnectionSpec(action_args[1])
+      
+      result = datasource.CreateSchema(connection_data)
+    
+    
+    # Export the current DB schema to a specified data source
     elif action_args[0] == 'export':
-      result = datasource.ExportSchema()
+      connection_data = LoadConnectionSpec(action_args[1])
+      
+      target_path = action_args[2]
+      
+      result = datasource.ExportSchema(connection_data, target_path)
+    
+    
+    # Extract is the opposite of "update", and will get our DB schema and put it into our files where we "update" from
+    elif action_args[0] == 'extract':
+      connection_data = LoadConnectionSpec(action_args[1])
+      
+      result = datasource.ExtractSchema(connection_data)
+    
     
     elif action_args[0] == 'migrate':
       # Export from one, and import to another, in one step
       source_result = datasource.ExportSchema()
       target_result = datasource.UpdateSchema(source_result)
+    
+    
+    # Update the database based on our schema spec files
+    elif action_args[0] == 'update':
+      connection_data = LoadConnectionSpec(action_args[1])
+      
+      result = datasource.UpdateSchema(connection_data)
+    
     
     # ERROR
     else:

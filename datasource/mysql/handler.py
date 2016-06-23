@@ -11,6 +11,11 @@ def CreateSchema():
   pass
 
 
+def ExtractSchema():
+  """Export a schema, based on a spec, or everything"""
+  pass
+
+
 def ExportSchema():
   """Export a schema, based on a spec, or everything"""
   pass

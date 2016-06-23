@@ -6,6 +6,7 @@
  * Version management from PUTs
  * Head and versioned data from GETs
  * Change Management action to COMMIT
- 
- 
+ * Populate actions for basic security, ownership and doing change management
+
+# Done 
  
