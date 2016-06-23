@@ -37,12 +37,22 @@ class Connection:
 	
 	
 	def __del__(self):
-		if self.connection:
-			self.cursor.close()
-			self.connection.close()
+		self.Close()
+
+
+	def Close(self):
+		"""Close the cursor and connection, if they are open, and set them to None"""
+		if self.cursor:
+			try:
+				self.cursor.close()
+			finally:
+				self.cursor = None
 			
-			self.connection = None
-			self.cursor = None
+		if self.connection:
+			try:
+				self.connection.close()
+			finally:			
+				self.connection = None
 
 	
 	def GetServerData(self):
@@ -90,8 +100,11 @@ class Connection:
 	
 	
 	def IsAvailable(self):
-		"""Returns boolean, True if not currently being used by a request"""
-		if self.request_number:
+		"""Returns boolean, True if not currently being used by a request and has a non-None connection.
+		
+		NOTE(g): This does not verify the connection, just ensures that we think we have a valid connection.
+		"""
+		if self.request_number and self.connection:
 			return False
 		
 		else:
