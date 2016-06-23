@@ -13,7 +13,7 @@ def TestConnection(connection_data, request_number):
   
   connection = GetConnection(connection_data, request_number, server_id=None)
   
-  result = connection.Query('SELECT 1')
+  result = connection.Query('SHOW TABLES')
   
   return result
 

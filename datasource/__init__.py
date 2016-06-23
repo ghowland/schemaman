@@ -68,7 +68,9 @@ def TestConnection(connection_data, request_number=None):
   """Connect to the datasource's database and ensure we can read from it."""
   (handler, request_number) = DetermineHandlerModule(connection_data, request_number)
   
-  handler.TestConnection(connection_data, request_number)
+  result = handler.TestConnection(connection_data, request_number)
+  
+  return result
 
 
 def CreateSchema(connection_data, schema, request_number=None):

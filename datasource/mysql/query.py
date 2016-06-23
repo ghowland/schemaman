@@ -6,6 +6,7 @@ Datasource: MySQL: Querying
 import threading
 
 import mysql.connector
+from mysql.connector import errorcode
 
 
 # Default connection pool size.  Override with connection_data
@@ -34,6 +35,15 @@ class Connection:
 		# Connect
 		self.Connect()
 	
+	
+	def __del__(self):
+		if self.connection:
+			self.cursor.close()
+			self.connection.close()
+			
+			self.connection = None
+			self.cursor = None
+
 	
 	def GetServerData(self):
 		"""Returns a dict for server data, which is layered from the server configs"""
@@ -69,13 +79,14 @@ class Connection:
 		# Read the password from the first line of the password file
 		try:
 			password = open(server['password_path']).read().split('\n', 1)[0]
+			print 'Loaded password: %s: %s' % (server['password_path'], password)
 			
 		except Exception, e:
 			print 'ERROR: Failed to read from password file: %s' % server['password_path']
 			password = None
 		
-		self.connection = mysql.connector.connect(user=server['user'], password=password, host=server['host'], port=server['port'], database=server['database'])
-		self.cursor = conn.cursor(cursor_class=MySQLCursorDict)
+		self.connection = mysql.connector.connect(user=server['user'], password=password, host=server['host'], port=server['port'], database=server['database'], use_unicode=True, charset='latin1')
+		self.cursor = self.connection.cursor(dictionary=True)
 	
 	
 	def IsAvailable(self):
@@ -89,17 +100,11 @@ class Connection:
 
 	def Query(self, sql, params=None):
 		"""Query the database via our connection."""
+		print 'Query: %s' % sql
+		
 		result = Query(self.connection, self.cursor, sql, params=params)
 		
 		return result
-
-
-class MySQLCursorDict(mysql.connector.cursor.MySQLCursor):
-	def _row_to_python(self, rowdata, desc=None):
-		row = super(MySQLCursorDict, self)._row_to_python(rowdata, desc)
-		if row:
-			return dict(zip(self.column_names, row))
-		return None
 
 
 def GetConnection(connection_data, request_number, server_id=None):
@@ -121,7 +126,7 @@ def GetConnection(connection_data, request_number, server_id=None):
 	
 	
 	# Ensure we have a pool for this server in our connection pool pools
-	if server_key not in CONNECTION_POOL_POOL:
+	if connection.server_key not in CONNECTION_POOL_POOL:
 		try:
 			CONNECTION_POOL_POOL_LOCK.acquire()
 			print 'Creating new MySQL connection pool: %s' % connection.server_key
@@ -141,22 +146,27 @@ def GetConnection(connection_data, request_number, server_id=None):
 	return connection
 
 
-def Query(conn, cursor, sql, params=None):
+def Query(conn, cursor, sql, params=None, commit=True):
+	"""Query"""
 	cursor.execute(sql)
 	
 	if sql.upper().startswith('INSERT'):
 		result = cursor.lastrowid
-		conn.commit()
+		
+		if commet:
+			conn.commit()
+			
 	elif sql.upper().startswith('UPDATE') or sql.upper().startswith('DELETE'):
-		conn.commit()
-		result = None
-	elif sql.upper().startswith('SELECT'):
-		result = cursor.fetchall()
-	else:
+		if commit:
+			conn.commit()
+		
 		result = None
 	
-	cursor.close()
-	conn.close()
+	elif sql.upper().startswith('SELECT') or sql.upper().startswith('SHOW'):
+		result = cursor.fetchall()
+	
+	else:
+		result = None
 	
 	return result
 
