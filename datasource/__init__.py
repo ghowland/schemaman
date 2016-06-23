@@ -159,17 +159,19 @@ def ImportData(drop_first=False, transaction=False, request_number=None):
   handler.ImportData(connection_data, path)
 
 
-def Put(connection_data, data, request_number=None):
+def Set(connection_data, table, data, request_number=None):
   """Put (insert/update) data into this datasource.
   
   Works as a single transaction.
   """
   (handler, request_number) = DetermineHandlerModule(connection_data, request_number)
   
-  handler.Put(connection_data, data)
+  result = handler.Set(connection_data, table, data, request_number)
+  
+  return result
 
 
-def Get(connection_data, table, data, request_number=None):
+def Get(connection_data, table, record_id, request_number=None):
   """Get (select single record) from this datasource.
   
   Can be a 'view', combining several lower level 'tables'.
@@ -183,7 +185,9 @@ def Get(connection_data, table, data, request_number=None):
   """
   (handler, request_number) = DetermineHandlerModule(connection_data, request_number)
   
-  handler.Get(connection_data, table, data, request_number)
+  result = handler.Get(connection_data, table, record_id, request_number)
+  
+  return result
 
 
 def Filter(connection_data, table, data, request_number):

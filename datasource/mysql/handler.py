@@ -2,8 +2,15 @@
 Handle all SchemaMan datasource specific functions: MySQL
 """
 
+import datasource
+
+from utility.log import Log
 
 from query import *
+
+
+# Debugging information logged?
+SQL_DEBUG = True
 
 
 def TestConnection(connection_data, request_number):
@@ -129,15 +136,69 @@ def ImportData(connection_data, request_number, drop_first=False, transaction=Fa
   pass
 
 
-def Put(connection_data, request_number, record):
+def Set(connection_data, table, data, request_number, noop=False, update_returns_id=True, debug=SQL_DEBUG):
   """Put (insert/update) data into this datasource.
   
   Works as a single transaction.
   """
-  pass
+  # INSERT values into a table, and if they already exist, perform an UPDATE on the fields
+  base_sql = "INSERT INTO `%s` (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s"
+  
+  # Wrap all keys in backticks, so they cannot conflict with SQL keywords
+  keys = data.keys()
+  keys.sort()
+  keys_ticked = []
+  update_sets = []
+  values = []
+  value_format_list = []
+  
+  
+  # Get our backticked wrapped insert keys, our value list, and our update setting
+  for count in range(0, len(keys)):
+    # Back tick column names
+    ticked_key = '`%s`' % keys[count]
+    keys_ticked.append(ticked_key)
+    
+    # Value list
+    values.append(data[keys[count]])
+    value_format_list.append('%s')
+    
+    # Update keys will reference the insert keys, so we dont have to specify the data twice (SQL does it)
+    #TODO(g): Should I remove the primary key from this?  Not sure it's necessary.  Remove comment when proven it works without removing it (simpler)...
+    update_sets.append('%s=VALUES(%s)' % (ticked_key, ticked_key))
+  
+  
+  # Build out strings to insert into our base_sql
+  insert_columns = ', '.join(keys_ticked)
+  value_format_str = ', '.join(value_format_list)
+  update_sql = ', '.join(update_sets)
+  
+  
+  # Create our final SQL
+  sql = base_sql % (table, insert_columns, value_format_str, update_sql)
+  
+  # Get a connection
+  connection = GetConnection(connection_data, request_number, server_id=None)
+  
+  
+  # Query.  Will return a row_id (int) for INSERT, and None for Update
+  if not noop:
+    result = connection.Query(sql, values)
+    
+    # If we did an Update, we really want the 'id' field returned, like INSERT does (consistency and not having to do this all the time after an update)
+    if result == 0 and update_returns_id:
+      # This should always return a single dict in a list, due to our uniqueness constraints
+      rows = Filter(connection_data, table, data, request_number)
+      result = rows[0]['id']
+    
+  else:
+    Log('Query not run, noop = True')
+    result = None
+  
+  return result
 
 
-def Get(connection_data, table, data, request_number):
+def Get(connection_data, table, record_id, request_number):
   """Get (select single record) from this datasource.
   
   Can be a 'view', combining several lower level 'tables'.
@@ -150,23 +211,20 @@ def Get(connection_data, table, data, request_number):
   
   Returns: dict, single record key/values
   """
-  keys = list(data.keys())
-  if len(keys) != 1:
-    raise Exception('There should be exactly 1 key at the top level of the data dictionary, which is the table name.')
+  # Get a connection
+  connection = GetConnection(connection_data, request_number, server_id=None)
   
-  table = keys[0]
-  
-  # If we have an 'id' field
-  #TODO(g): Confirm this is the primary key name, not just "id" all the time
+  #TODO(g): Confirm this is the primary key name, not just "id" all the time.  Can look this up in our schema_data_paths from connection_data...
   #TODO(g): Allow multiple fields for primary key, and do the right thing with them
-  if 'id' in data:
-    sql = "SELECT * FROM %s WHERE id = %s" % (table, data['id'])
-    result = Query(sql)
-    
-    return result
-    
+  sql = "SELECT * FROM `%s` WHERE id = %s" % (table, int(record_id))
+  result = connection.Query(sql)
+  
+  if result:
+    record = result[0]
   else:
-    raise Exception('No "id" field in data, other methods of selection not yet implemented...')
+    record = None
+  
+  return record
 
 
 def Filter(connection_data, table, data, request_number):

@@ -166,7 +166,7 @@ def Query(conn, cursor, sql, params=None, commit=True):
 	if sql.upper().startswith('INSERT'):
 		result = cursor.lastrowid
 		
-		if commet:
+		if commit:
 			conn.commit()
 			
 	elif sql.upper().startswith('UPDATE') or sql.upper().startswith('DELETE'):

@@ -74,7 +74,17 @@ def Action(connection_data, action_input_args):
   # If we dont already have this record
   if not schema_database:
     # Create it, and get it's record again so we have it's ID
-    pass
+    record = {'name':data['table_database'], 'mysql_user':connection_data['datasource']['user'],
+              'mysql_password_path':connection_data['datasource']['password_path'],
+              'mysql_hostname':connection_data['datasource']['servers'][0]['host']}
+    schema_database_id = datasource.Set(target_connection_data, data['table_database'], record, request_number=request_number)
+    
+    print 'Created record: %s' % schema_database_id
+    
+    # Get the record we just put in
+    schema_database = datasource.Get(target_connection_data, data['table_database'], schema_database_id, request_number=request_number)
+
+    print 'Fetched record: %s' % schema_database
   
   
   # Loop over all our tables
