@@ -54,6 +54,7 @@ def Usage(error=None):
   output += 'Additional Data Actions:\n'
   output += '\n'
   output += '  action populate schema_into_db <target_schema> Populate Schema Into DB\n'
+  output += '\n'
   output += 'Options:\n'
   output += '\n'
   output += '  -d <path>, --dir=<path>             Directory for SchemaMan data/conf/schemas\n'

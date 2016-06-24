@@ -153,6 +153,7 @@ def ProcessAction(action, action_args, command_options):
       },
       'schema_paths': [schema_record_path],
       'value_type_path': 'data/schema/value_types/standard.yaml',
+      'actions': {},
     }
     
     SaveYaml(schema_path, schema_data)

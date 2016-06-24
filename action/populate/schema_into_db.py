@@ -12,39 +12,21 @@ from utility.interactive_input import *
 import datasource
 
 
+# This action's command on the CLI and also in the connection_data.actions dict as a key for our data
+ACTION = 'schema_into_db'
+
+
 def Action(connection_data, action_input_args):
   """Perform action: Populate schema into DB"""
   print 'Populate Schema Into DB'
   
-  data = {}
+  data = CollectData(connection_data, action_input_args)
   
-  # Get the Database table name
-  intro_string = 'Name of table to put the Database in.'
-  GetInputField(data, 'table_database', 'Database Table', 'database table', intro_string, force_strip=True)
-  
-  # Get the Table table name
-  intro_string = 'Name of table to put the Tables in.'
-  GetInputField(data, 'table_table', 'Table Table', 'table table', intro_string, force_strip=True)
-  
-  # Get the Field table name
-  intro_string = 'Name of table to put the Fields in.'
-  GetInputField(data, 'table_field', 'Field Table', 'field table', intro_string, force_strip=True)
-
-  
-  print '\nThese are the tables you specified:'
-  print '  - Database: %s' % data['table_database']
-  print '  - Table: %s' % data['table_table']
-  print '  - Field: %s' % data['table_field']
-  print
-  print 'Is this correct?  (Enter Yes or this action will abort)'
-  
-  confirmation = ReadLine('$ ')
-  
-  # Aborting
-  if confirmation.lower() != 'yes':
+  # If we got invalid data or aborted, quit this action
+  if data == None:
     return '\nAborting...'
-  
-  
+
+
   # Load all the schemas, and overlay them to get the sum of all of them (in order, so deterministic, last write wins)
   total_schema = {}
   for schema_path in connection_data['schema_paths']:
@@ -130,7 +112,67 @@ def Action(connection_data, action_input_args):
         field_record = {'name':field, 'schema_table_id':schema_table_id, 'is_primary_key':field_data['pkey'],
                         'allow_null':field_data['allow_null'], 'default_value':field_data['default'], 'value_type_id':value_type_id}
         schema_field_id = datasource.Set(target_connection_data, data['table_field'], field_record, request_number=request_number)
+
+
+def CollectData(connection_data, action_input_args):
+  """Collect data that we need, if we dont already have it stored in our connection_data.actions dict"""
+  data = {}
+  
+  # If we have data in our connection_data, use it
+  if ACTION in connection_data['actions']:
+    #TODO(g): Validate that this data is correct
+    data = connection_data['actions'][ACTION]
+  
+    print '\nThese are the tables you specified:'
+    print '  - Database: %s' % data['table_database']
+    print '  - Table: %s' % data['table_table']
+    print '  - Field: %s' % data['table_field']
+    print
+    print 'Is this correct?  (Enter Yes to use these values, anything else to enter new values)'
     
+    confirmation = ReadLine('$ ')
     
+    # Use the saved data, otherwise collect new data
+    if confirmation.lower() == 'yes':
+      return data
+    else:
+      data = {}
+  
+  
+  # Get the Database table name
+  intro_string = 'Name of table to put the Database in.'
+  GetInputField(data, 'table_database', 'Database Table', 'database table', intro_string, force_strip=True)
+  
+  # Get the Table table name
+  intro_string = 'Name of table to put the Tables in.'
+  GetInputField(data, 'table_table', 'Table Table', 'table table', intro_string, force_strip=True)
+  
+  # Get the Field table name
+  intro_string = 'Name of table to put the Fields in.'
+  GetInputField(data, 'table_field', 'Field Table', 'field table', intro_string, force_strip=True)
+
+  
+  print '\nThese are the tables you specified:'
+  print '  - Database: %s' % data['table_database']
+  print '  - Table: %s' % data['table_table']
+  print '  - Field: %s' % data['table_field']
+  print
+  print 'Is this correct?  (Enter Yes, Save or this action will abort)'
+  
+  confirmation = ReadLine('$ ')
+  
+  # Aborting
+  if confirmation.lower() not in ('yes', 'save'):
+    return None
+  
+  
+  # Save our connection data with the updated information
+  if confirmation.lower() == 'save':
+    connection_data['actions'][ACTION] = data
+    
+    datasource.SaveConnectionSpec(connection_data)
+  
+  
+  return data
   
   

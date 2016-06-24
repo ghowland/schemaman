@@ -63,8 +63,26 @@ def LoadConnectionSpec(path):
   try:
     data = LoadYaml(path)
     
+    # Save our path, we will remove this if we save it
+    data['__path'] = path
+    
   except Exception, e:
     Error('Could not load connection spec YAML: %s: %s' % (path, e))
+  
+  return data
+
+
+def SaveConnectionSpec(connection_data):
+  """Load the connection specification."""
+  try:
+    data = dict(connection_data)
+    path = data['__path']
+    del data['__path']
+    
+    SaveYaml(path, data)
+    
+  except Exception, e:
+    Error('Could not save connection spec YAML: %s: %s' % (path, e))
   
   return data
 
