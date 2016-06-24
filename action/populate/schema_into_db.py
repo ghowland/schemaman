@@ -13,7 +13,7 @@ import datasource
 
 
 # This action's command on the CLI and also in the connection_data.actions dict as a key for our data
-ACTION = 'schema_into_db'
+ACTION = 'populate__schema_into_db'
 
 
 def Action(connection_data, action_input_args):
