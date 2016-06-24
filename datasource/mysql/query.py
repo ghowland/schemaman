@@ -121,7 +121,10 @@ class Connection:
 
 
 def MySQLReleaseConnections(connection_data, request_number):
-	"""Release any connections tied with this request_number"""
+	"""Release any connections tied with this request_number
+	
+	TODO(g): 
+	"""
 	global CONNECTION_POOL_POOL
 	
 	# Generate the server key, since this specifies which CONNECTION_POOL_POOL we are in
@@ -135,7 +138,6 @@ def MySQLReleaseConnections(connection_data, request_number):
 			if connection.request_number == request_number:
 				#TODO(g): Turn this into a method to release it
 				connection.request_number = None
-
 
 
 def GetConnection(connection_data, request_number, server_id=None):
