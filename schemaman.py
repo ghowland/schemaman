@@ -33,6 +33,9 @@ import action as action_module
 # Mode for directories we create.
 MODE_DIRECTORY = 0755
 
+# Version of the connection_data spec
+CONNECTION_SPEC_VERSION = 1
+
 
 def ProcessAction(action, action_args, command_options):
   """Process the specified action, by it's action arguments.  Using command options."""
@@ -168,6 +171,7 @@ def ProcessAction(action, action_args, command_options):
       'schema_paths': [schema_record_path],
       'value_type_path': 'data/schema/value_types/standard.yaml',
       'actions': {},
+      'version': CONNECTION_SPEC_VERSION,
     }
     
     SaveYaml(schema_path, schema_data)
