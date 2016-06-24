@@ -120,8 +120,28 @@ class Connection:
 		return result
 
 
+def MySQLReleaseConnections(connection_data, request_number):
+	"""Release any connections tied with this request_number"""
+	global CONNECTION_POOL_POOL
+	
+	# Generate the server key, since this specifies which CONNECTION_POOL_POOL we are in
+	#TODO(g): Turn this into a function?  I have to duplicate this from the connection class otherwise...  Or only do it here?
+	server_key = '%s.%s' % (connection_data['alias'], server_id)
+
+	# Look through the current connection pool, to see if we already have a connection for this request_number
+	if server_key in CONNECTION_POOL_POOL:
+		for connection in CONNECTION_POOL_POOL[server_key]:
+			# If this connection is for the same request, release it
+			if connection.request_number == request_number:
+				#TODO(g): Turn this into a method to release it
+				connection.request_number = None
+
+
+
 def GetConnection(connection_data, request_number, server_id=None):
 	"""Returns a connection to the specified database server_id, based on the request number (may already have a connection for that request)."""
+	global CONNECTION_POOL_POOL
+	
 	# If we didnt have a server_id specified, use the master_server_id
 	if server_id == None:
 		server_id = connection_data['datasource']['master_server_id']
@@ -132,6 +152,31 @@ def GetConnection(connection_data, request_number, server_id=None):
 		if server_data['id'] == server_id:
 			found_server = server_data
 			break
+
+
+	# Generate the server key, since this specifies which CONNECTION_POOL_POOL we are in
+	#TODO(g): Turn this into a function?  I have to duplicate this from the connection class otherwise...  Or only do it here?
+	server_key = '%s.%s' % (connection_data['alias'], server_id)
+
+
+	# Look through the current connection pool, to see if we already have a connection for this request_number
+	if server_key in CONNECTION_POOL_POOL:
+		for connection in CONNECTION_POOL_POOL[server_key]:
+			# If this connection is for the same request, use it
+			if connection.request_number == request_number:
+				return connection
+	
+
+	# Look through current connection pool, to see if we have any available connections in this server, that we can use
+	if server_key in CONNECTION_POOL_POOL:
+		for connection in CONNECTION_POOL_POOL[server_key]:
+			# If this connection is available (not being used in a request)
+			if connection.IsAvailable():
+				#TODO(g): Make this a method to set it to this request
+				connection.request_number = request_number
+				return connection
+	
+
 
 	
 	# Create the connection

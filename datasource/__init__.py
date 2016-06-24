@@ -26,6 +26,35 @@ GLOBAL_REQUEST_COUNTER_LOCK = threading.Lock()
 #     
 
 
+class Request:
+  """Contains request information, and can close transactions due to scope GC collections."""
+  
+  def __init__(self, connection_data, request_number=None, server_id=None):
+    self.connection_data = connection_data
+    
+    # Ensure we have a request number
+    if not request_number:
+      self.request_number = GetRequestNumber()
+    
+    else:
+      self.request_number = request_number
+    
+    
+    self.server_id
+  
+  
+  def __del__(self):
+    """Going out of scope, ensure we release any connections that we have."""
+    ReleaseConnections(connection_data, request_number)
+
+
+def ReleaseConnections(connection_data, request_number):
+  """Release any connections we have open and tied to this request_number (wont close them)"""
+  (handler, request_number) = DetermineHandlerModule(connection_data, request_number)
+  
+  handler.ReleaseConnections(connection_data, request_number)
+
+
 def LoadConnectionSpec(path):
   """Load the connection specification."""
   if not os.path.isfile(path):

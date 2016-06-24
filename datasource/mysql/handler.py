@@ -13,6 +13,12 @@ from query import *
 SQL_DEBUG = True
 
 
+def ReleaseConnections(connection_data, request_number):
+  """Release any connections tied with this request_number"""
+  #TODO(g): Flatten this call path
+  MySQLReleaseConnections(connection_data, request_number)
+
+
 def TestConnection(connection_data, request_number):
   """Create a schema, based on a spec"""
   
