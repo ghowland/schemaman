@@ -89,7 +89,7 @@ class Connection:
 		# Read the password from the first line of the password file
 		try:
 			password = open(server['password_path']).read().split('\n', 1)[0]
-			print 'Loaded password: %s: %s' % (server['password_path'], password)
+			print 'Loaded password: %s' % server['password_path']
 			
 		except Exception, e:
 			print 'ERROR: Failed to read from password file: %s' % server['password_path']

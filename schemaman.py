@@ -54,7 +54,10 @@ def ProcessAction(action, action_args, command_options):
     # Attempt to connect to the DB to test it
     result = datasource.TestConnection(connection_data)
     
-    print result
+    if result:
+      print '\nConnection test: SUCCESS'
+    else:
+      print '\nConnection test: FAILURE'
   
   
   # If Action is action:  This is where we dump all kinds of functions, that dont need top-level access.  The long-tail of features.
