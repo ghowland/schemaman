@@ -36,19 +36,24 @@ The Change Management can invoke scripts against data for owners, groups to prov
 Schema Actions:
 
   info                                       Print info on current schema directory
-  init <path>                                Initialize a path for new data set schema
+  init <path>                                Initialize a path for new schemas
   schema create <schema>                     Create a schema interactively
   schema export <schema> <source>            Export a database schema from a source
   schema update <schema> <source> <target>   Migrate schema/data from source to target
   data export <schema> <source>              Export all the data from the schema/source
   data import <schema> <source>              Import data into the schema/source
 
-Data Actions:
+Primary Data Actions:
 
   put <schema> <source> <json>        Put JSON data into a Schema instance
   get <schema> <source> <json>        Get Schema instance records from JSON keys
   filter <schema> <source> <json>     Filter Schema instance records
   delete <schema> <source> <json>     Delete records from Schema instance
+
+Additional Data Actions:
+
+  action config version_change_management <target_schema>  Configure Version and Change Management
+  action populate schema_into_db <target_schema>           Populate Schema Into DB
 
 Options:
 
@@ -64,3 +69,4 @@ Options:
 
  * [Overview](docs/overview.md)
  * [Getting Started](docs/getting_started.md)
+ * [To-Do List](docs/todo.md)
