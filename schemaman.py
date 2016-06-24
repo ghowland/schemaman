@@ -77,8 +77,22 @@ def ProcessAction(action, action_args, command_options):
     #TODO(g): Turn this into YAML so that we can add into it.  Make sure it's multiple YAML files or something, so people can add their own without impacting the standard ones
     pass
     
-    # Category
-    if action_args[1] == 'populate':
+    # -- Category --
+    # Configure
+    if action_args[1] == 'config':
+      # Action
+      if action_args[2] == 'version_change_management':
+        if len(action_input_args) != 1:
+          Error('action: populate: schema_into_db: Takes 1 argument: <path to target schema defintion YAML>')
+        
+        result = action_module.config.version_change_management.Action(connection_data, action_input_args)
+        print result
+      
+      else:
+        Usage('Unknown Action in Category: %s: %s' % (action_args[1], action_args[2]))
+    
+    # Populate
+    elif action_args[1] == 'populate':
       # Action
       if action_args[2] == 'schema_into_db':
         if len(action_input_args) != 1:
