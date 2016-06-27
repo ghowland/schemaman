@@ -45,11 +45,11 @@ def Action(connection_data, action_input_args):
   
   
   # Get our request number.  We can use this with all data sources.
-  request_number = datasource.GetRequestNumber()
+  target_request = datasource.Request(target_connection_data, 'username', 'auth')
   
   
   # Get the existing entry for this, if it exists
-  schema_database_list = datasource.Filter(target_connection_data, data['table_database'], {'name':data['table_database']}, request_number=request_number)
+  schema_database_list = datasource.Filter(target_request, data['table_database'], {'name':data['table_database']})
   
   print 'Filter: Schema DB: %s' % schema_database_list
   
@@ -59,12 +59,12 @@ def Action(connection_data, action_input_args):
     schema_record = {'name':data['table_database'], 'mysql_user':connection_data['datasource']['user'],
                      'mysql_password_path':connection_data['datasource']['password_path'],
                      'mysql_hostname':connection_data['datasource']['servers'][0]['host']}
-    schema_database_id = datasource.Set(target_connection_data, data['table_database'], schema_record, request_number=request_number)
+    schema_database_id = datasource.Set(target_request, data['table_database'], schema_record)
     
     print 'Created record: %s' % schema_database_id
     
     # Get the record we just put in
-    schema_database = datasource.Get(target_connection_data, data['table_database'], schema_database_id, request_number=request_number)
+    schema_database = datasource.Get(target_request, data['table_database'], schema_database_id)
 
     print 'Fetched record: %s' % schema_database
   
@@ -77,11 +77,11 @@ def Action(connection_data, action_input_args):
     print 'Populating Schema for Table: %s' % table
 
     table_record = {'name':table, 'schema_id':schema_database['id']}
-    schema_table_list = datasource.Filter(target_connection_data, data['table_table'], table_record, request_number=request_number)
+    schema_table_list = datasource.Filter(target_request, data['table_table'], table_record)
     
     # If we dont have this table, create it
     if not schema_table_list:
-      schema_table_id = datasource.Set(target_connection_data, data['table_table'], table_record, request_number=request_number)
+      schema_table_id = datasource.Set(target_request, data['table_table'], table_record)
     
     else:
       schema_table_id = schema_table_list[0]['id']
@@ -90,7 +90,7 @@ def Action(connection_data, action_input_args):
       print 'Populating Schema for Field: %s: %s' % (table, field)
     
       field_record = {'name':field, 'schema_table_id':schema_table_id}
-      schema_field_list = datasource.Filter(target_connection_data, data['table_field'], field_record, request_number=request_number)
+      schema_field_list = datasource.Filter(target_request, data['table_field'], field_record)
       
       # If we dont have this table, create it
       if not schema_field_list:
@@ -111,7 +111,7 @@ def Action(connection_data, action_input_args):
         # We want to set all the data, we only wanted to search and table/fieldname
         field_record = {'name':field, 'schema_table_id':schema_table_id, 'is_primary_key':field_data['pkey'],
                         'allow_null':field_data['allow_null'], 'default_value':field_data['default'], 'value_type_id':value_type_id}
-        schema_field_id = datasource.Set(target_connection_data, data['table_field'], field_record, request_number=request_number)
+        schema_field_id = datasource.Set(target_request, data['table_field'], field_record)
 
 
 def CollectData(connection_data, action_input_args):
