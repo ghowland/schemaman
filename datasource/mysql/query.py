@@ -21,10 +21,13 @@ CONNECTION_POOL_POOL_LOCK = threading.Lock()
 class Connection:
 	"""This wraps MySQL connection and cursor objects, as well as tracks the progress of any requests, and if it is available for use by a new request."""
 	
-	def __init__(self, connection_data, server_id, request_number=None):
+	def __init__(self, connection_data, server_id, request):
+		# We need these to actually connect
 		self.connection_data = connection_data
 		self.server_id = server_id
-		self.request_number = request_number
+		
+		# This tells us who is connection.  Release() to make this connection available for other requests.
+		self.request = request
 		
 		# Generate the server key, since this specifies which CONNECTION_POOL_POOL we are in
 		self.server_key = '%s.%s' % (connection_data['alias'], server_id)
@@ -54,6 +57,46 @@ class Connection:
 			finally:			
 				self.connection = None
 
+
+	def Release(self):
+		"""Release this connection."""
+		self.request = None
+
+
+	def Acquire(self, request):
+		"""Acquire this Connection for this Request."""
+		self.request = request
+
+	
+	def IsAvailable(self):
+		"""Returns boolean, True if not currently being used by a request and has a non-None connection.
+		
+		NOTE(g): This does not verify the connection, just ensures that we think we have a valid connection.
+		"""
+		if self.request_number and self.connection:
+			return False
+		
+		else:
+			return True
+	
+
+	def IsInUse(self):
+		"""Returns boolean, True if not currently being used by a request."""
+		if self.request:
+			return True
+		
+		else:
+			return False
+
+
+	def IsUsedByRequest(self, request):
+		"""Returns boolean, True if currently being used by the same request that is being passed in as request."""
+		if self.request == request:
+			return True
+		
+		else:
+			return False
+	
 	
 	def GetServerData(self):
 		"""Returns a dict for server data, which is layered from the server configs"""
@@ -97,19 +140,7 @@ class Connection:
 		
 		self.connection = mysql.connector.connect(user=server['user'], password=password, host=server['host'], port=server['port'], database=server['database'], use_unicode=True, charset='latin1')
 		self.cursor = self.connection.cursor(dictionary=True)
-	
-	
-	def IsAvailable(self):
-		"""Returns boolean, True if not currently being used by a request and has a non-None connection.
-		
-		NOTE(g): This does not verify the connection, just ensures that we think we have a valid connection.
-		"""
-		if self.request_number and self.connection:
-			return False
-		
-		else:
-			return True
-	
+
 
 	def Query(self, sql, params=None):
 		"""Query the database via our connection."""
@@ -120,7 +151,7 @@ class Connection:
 		return result
 
 
-def MySQLReleaseConnections(connection_data, request_number):
+def MySQLReleaseConnections(request):
 	"""Release any connections tied with this request_number
 	
 	TODO(g): 
@@ -129,28 +160,30 @@ def MySQLReleaseConnections(connection_data, request_number):
 	
 	# Generate the server key, since this specifies which CONNECTION_POOL_POOL we are in
 	#TODO(g): Turn this into a function?  I have to duplicate this from the connection class otherwise...  Or only do it here?
-	server_key = '%s.%s' % (connection_data['alias'], server_id)
+	server_key = '%s.%s' % (request.connection_data['alias'], request.server_id)
 
 	# Look through the current connection pool, to see if we already have a connection for this request_number
 	if server_key in CONNECTION_POOL_POOL:
 		for connection in CONNECTION_POOL_POOL[server_key]:
 			# If this connection is for the same request, release it
-			if connection.request_number == request_number:
-				#TODO(g): Turn this into a method to release it
-				connection.request_number = None
+			if connection.IsUsedByRequest(request):
+				connection.Release()
 
 
-def GetConnection(connection_data, request_number, server_id=None):
+def GetConnection(request, server_id=None):
 	"""Returns a connection to the specified database server_id, based on the request number (may already have a connection for that request)."""
 	global CONNECTION_POOL_POOL
 	
 	# If we didnt have a server_id specified, use the master_server_id
-	if server_id == None:
-		server_id = connection_data['datasource']['master_server_id']
+	if request.server_id == None:
+		server_id = request.connection_data['datasource']['master_server_id']
+	else:
+		server_id = request.server_id
+	
 	
 	# Find the master host, which we will assume we are connecting to for now
 	found_server = None
-	for server_data in connection_data['datasource']['servers']:
+	for server_data in request.connection_data['datasource']['servers']:
 		if server_data['id'] == server_id:
 			found_server = server_data
 			break
@@ -158,14 +191,14 @@ def GetConnection(connection_data, request_number, server_id=None):
 
 	# Generate the server key, since this specifies which CONNECTION_POOL_POOL we are in
 	#TODO(g): Turn this into a function?  I have to duplicate this from the connection class otherwise...  Or only do it here?
-	server_key = '%s.%s' % (connection_data['alias'], server_id)
+	server_key = '%s.%s' % (request.connection_data['alias'], request.server_id)
 
 
 	# Look through the current connection pool, to see if we already have a connection for this request_number
 	if server_key in CONNECTION_POOL_POOL:
 		for connection in CONNECTION_POOL_POOL[server_key]:
 			# If this connection is for the same request, use it
-			if connection.request_number == request_number:
+			if connection.IsUsedByRequest(request):
 				return connection
 	
 
@@ -175,14 +208,14 @@ def GetConnection(connection_data, request_number, server_id=None):
 			# If this connection is available (not being used in a request)
 			if connection.IsAvailable():
 				#TODO(g): Make this a method to set it to this request
-				connection.request_number = request_number
+				connection.Acquire(request)
 				return connection
 	
 
 
 	
 	# Create the connection
-	connection = Connection(connection_data, server_id, request_number=request_number)
+	connection = Connection(request.connection_data, server_id, request)
 	
 	
 	# Ensure we have a pool for this server in our connection pool pools

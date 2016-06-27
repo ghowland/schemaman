@@ -13,34 +13,34 @@ from query import *
 SQL_DEBUG = True
 
 
-def ReleaseConnections(connection_data, request_number):
+def ReleaseConnections(request):
   """Release any connections tied with this request_number"""
   #TODO(g): Flatten this call path
-  MySQLReleaseConnections(connection_data, request_number)
+  MySQLReleaseConnections(request)
 
 
-def TestConnection(connection_data, request_number):
+def TestConnection(request):
   """Create a schema, based on a spec"""
   
-  print 'MySQL: Test Connection: %s: %s' % (connection_data['alias'], request_number)
+  print 'MySQL: Test Connection: %s: %s' % (request.connection_data['alias'], request.request_number)
   
-  connection = GetConnection(connection_data, request_number, server_id=None)
+  connection = GetConnection(request)
   
   result = connection.Query('SHOW TABLES')
   
   return result
 
 
-def CreateSchema(connection_data, request_number):
+def CreateSchema(request):
   """Create a schema, based on a spec"""
   pass
 
 
-def ExtractSchema(connection_data, request_number):
+def ExtractSchema(request):
   """Export a schema, based on a spec, or everything"""
-  print 'MySQL: Extract Schema: %s: %s' % (connection_data['alias'], request_number)
+  print 'MySQL: Extract Schema: %s: %s' % (request.connection_data['alias'], request.request_number)
   
-  connection = GetConnection(connection_data, request_number, server_id=None)
+  connection = GetConnection(request, server_id=request.server_id)
   
   # Pack all our schema data in here
   data = {}
@@ -109,12 +109,12 @@ def ExtractSchema(connection_data, request_number):
   return data
 
 
-def ExportSchema(connection_data, request_number):
+def ExportSchema(request):
   """Export a schema, based on a spec, or everything"""
   pass
 
 
-def UpdateSchema(connection_data, request_number):
+def UpdateSchema(request):
   """Update a schema, based on a spec.
   
   Can go 'forward' or 'backwards' for version control, its still updating.
@@ -122,12 +122,12 @@ def UpdateSchema(connection_data, request_number):
   pass
 
 
-def ExportData(connection_data, request_number):
+def ExportData(request):
   """Export/dump data from this datasource, based on spec, or everything"""
   pass
 
 
-def ImportData(connection_data, request_number, drop_first=False, transaction=False):
+def ImportData(request, drop_first=False, transaction=False):
   """Import/load data to this datasource, based on spec, or everything.
   
   Args:
@@ -142,7 +142,7 @@ def ImportData(connection_data, request_number, drop_first=False, transaction=Fa
   pass
 
 
-def Set(connection_data, table, data, request_number, noop=False, update_returns_id=True, debug=SQL_DEBUG):
+def Set(request, table, data, noop=False, update_returns_id=True, debug=SQL_DEBUG):
   """Put (insert/update) data into this datasource.
   
   Works as a single transaction.
@@ -184,7 +184,7 @@ def Set(connection_data, table, data, request_number, noop=False, update_returns
   sql = base_sql % (table, insert_columns, value_format_str, update_sql)
   
   # Get a connection
-  connection = GetConnection(connection_data, request_number, server_id=None)
+  connection = GetConnection(request)
   
   
   # Query.  Will return a row_id (int) for INSERT, and None for Update
@@ -204,21 +204,24 @@ def Set(connection_data, table, data, request_number, noop=False, update_returns
   return result
 
 
-def Get(connection_data, table, record_id, request_number):
+def Get(request, table, record_id, version_number=None, use_working_version=True):
   """Get (select single record) from this datasource.
   
   Can be a 'view', combining several lower level 'tables'.
   
   Args:
-    connection_data: dict, Connection Specificatin for Data Set
-    table: string, ...
-    data: dict, ...
-    request_number: int, Transactional request number
-  
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    record_id: int, primary key (ex: `id`) of the record in this table.  Use Filter() to use other field values
+    version_number: int (default None), if an int, this is the version number in the version_change or version_commit
+        tables.  version_change is scanned before version_commit, as these are more likely to be requested.
+    use_working_version: boolean (default True), if True and version_number==None this will also look at any
+        version_working data and return it instead the head table data, if it exists for this user.
+    
   Returns: dict, single record key/values
   """
   # Get a connection
-  connection = GetConnection(connection_data, request_number, server_id=None)
+  connection = GetConnection(request)
   
   #TODO(g): Confirm this is the primary key name, not just "id" all the time.  Can look this up in our schema_data_paths from connection_data...
   #TODO(g): Allow multiple fields for primary key, and do the right thing with them
@@ -233,7 +236,7 @@ def Get(connection_data, table, record_id, request_number):
   return record
 
 
-def Filter(connection_data, table, data, request_number):
+def Filter(request, table, data):
   """Get 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables'.
@@ -276,7 +279,7 @@ def Filter(connection_data, table, data, request_number):
   
   
   # Get a connection
-  connection = GetConnection(connection_data, request_number, server_id=None)
+  connection = GetConnection(request)
   
   # Query
   rows = connection.Query(sql, values)
@@ -284,7 +287,7 @@ def Filter(connection_data, table, data, request_number):
   return rows
 
 
-def Delete(connection_data, request_number):
+def Delete(request):
   """Delete a single record.
   
   NOTE(g): Processes single record deletes directly, sends fitlered deletes to DeleteFilter()
@@ -292,7 +295,7 @@ def Delete(connection_data, request_number):
   pass
 
 
-def DeleteFilter(connection_data, request_number):
+def DeleteFilter(request):
   """Delete 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables', which makes it a
@@ -303,5 +306,4 @@ def DeleteFilter(connection_data, request_number):
   NOTE(g): This is called by Delete(), and is not invoked from the CLI directly.
   """
   pass
-
 

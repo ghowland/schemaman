@@ -15,8 +15,6 @@ GLOBAL_REQUEST_COUNTER_LOCK = threading.Lock()
 class Request:
   """Contains request information, and can close transactions due to scope GC collections."""
   
-  #TODO(G): Change all of the request_number things into Request object things, because we need the username and other data as well, so it's important to use this only...
-  
   def __init__(self, connection_data, username, authentication, request_number=None, server_id=None, use_version_management=True, auto_commit=False):
     self.connection_data = connection_data
     

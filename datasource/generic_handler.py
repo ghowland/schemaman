@@ -52,13 +52,13 @@ def DetermineHandlerModule(request):
   """Returns the handler module, which can handle these requests."""
   # If we didnt have a server_id specified, use the master_server_id
   if request.server_id == None:
-    server_id = request.connection_data['datasource']['master_server_id']
+    server_id = request.request['datasource']['master_server_id']
   else:
     server_id = request.server_id
   
   # Find the master host, which we will assume we are connecting to for now
   found_server = None
-  for server_data in request.connection_data['datasource']['servers']:
+  for server_data in request.request['datasource']['servers']:
     if server_data['id'] == server_id:
       found_server = server_data
       break
@@ -73,13 +73,11 @@ def DetermineHandlerModule(request):
     return mysql
   
   
-  raise Exception('Unknown Data Source Type: %s' % request.connection_data['type'])
+  raise Exception('Unknown Data Source Type: %s' % request.request['type'])
 
 
 def TestConnection(request):
   """Connect to the datasource's database and ensure we can read from it."""
-  (handler, request_number) = DetermineHandlerModule(request)
-  
   result = handler.TestConnection(request)
   
   return result
@@ -92,38 +90,30 @@ def CreateSchema(request, schema):
 
 def ExtractSchema(request):
   """Export a schema, based on a spec, or everything"""
-  (handler, request_number) = DetermineHandlerModule(request)
-  
   result = handler.ExtractSchema(request)
   
   return result
 
 
-def ExportSchema(connection_data, path, request_number=None):
+def ExportSchema(request, path):
   """Export a schema, based on a spec, or everything"""
-  (handler, request_number) = DetermineHandlerModule(request)
-  
-  handler.ExportSchema(connection_data, path)
+  handler.ExportSchema(request, path)
 
 
-def UpdateSchema(connection_data, schema, request_number=None):
+def UpdateSchema(request, schema):
   """Update a schema, based on a spec.
   
   Can go 'forward' or 'backwards' for version control, its still updating.
   """
-  (handler, request_number) = DetermineHandlerModule(request)
-  
-  handler.UpdateSchema(connection_data, schema)
+  handler.UpdateSchema(request, schema)
 
 
-def ExportData(connection_data, path, request_number=None):
+def ExportData(request, path):
   """Export/dump data from this datasource, based on spec, or everything"""
-  (handler, request_number) = DetermineHandlerModule(request)
-  
-  handler.ExportData(connection_data, path)
+  handler.ExportData(request, path)
 
 
-def ImportData(drop_first=False, transaction=False, request_number=None):
+def ImportData(request, drop_first=False, transaction=False):
   """Import/load data to this datasource, based on spec, or everything.
   
   Args:
@@ -135,23 +125,22 @@ def ImportData(drop_first=False, transaction=False, request_number=None):
   
   Returns: None
   """
-  (handler, request_number) = DetermineHandlerModule(request)
-  
-  handler.ImportData(connection_data, path)
+  handler.ImportData(request, path)
 
 
-def RecordVersionsAvailable(connection_data, table, record_id, username):
+def RecordVersionsAvailable(request, table, record_id, username):
   """List all of the historical and currently available versions available for this record."""
   
+  pass#...Do this...
 
 
-def Set(connection_data, table, data, request_number=None, commit_version=False, version_number=None):
+def Set(request, table, data, request_number=None, commit_version=False, version_number=None):
   """Put (insert/update) data into this datasource.
   
   Works as a single transaction.
   
   Args:
-    connection_data: dict, Connection Spec data
+    request: Request Object, the connection spec data and user and auth info, etc
     table: string, name of table to operate on
     data: dict, record to set into table
     request_number: int (default None), if not None, this is a known request number, which allows us to perform
@@ -163,26 +152,20 @@ def Set(connection_data, table, data, request_number=None, commit_version=False,
   
   Returns: int or None, if creating a new record this returns the newly created record primary key (ex: `id`), otherwise None
   """
-  (handler, request_number) = DetermineHandlerModule(request)
-  
-  result = handler.Set(connection_data, table, data, request_number)
+  result = handler.Set(request, table, data)
   
   return result
 
 
-def Get(connection_data, table, record_id, request_number=None, version_number=None, use_working_version=True):
+def Get(request, table, record_id, version_number=None, use_working_version=True):
   """Get (select single record) from this datasource.
   
   Can be a 'view', combining several lower level 'tables'.
   
   Args:
-    connection_data: dict, Connection Spec data
+    request: Request Object, the connection spec data and user and auth info, etc
     table: string, name of table to operate on
     record_id: int, primary key (ex: `id`) of the record in this table.  Use Filter() to use other field values
-    request_number: int (default None), if not None, this is a known request number, which allows us to perform
-        transactions, and re-use the same DB connections
-    commit_version: boolean (default False), if True, this will attempt to Commit the Version data after it has
-        been stored in version_change as a single record update, without any additional VMCM actions
     version_number: int (default None), if an int, this is the version number in the version_change or version_commit
         tables.  version_change is scanned before version_commit, as these are more likely to be requested.
     use_working_version: boolean (default True), if True and version_number==None this will also look at any
@@ -192,19 +175,17 @@ def Get(connection_data, table, record_id, request_number=None, version_number=N
   """
   (handler, request_number) = DetermineHandlerModule(request)
   
-  result = handler.Get(connection_data, table, record_id, request_number)
+  result = handler.Get(request, table, record_id, request_number)
   
   return result
 
 
-def Filter(connection_data, table, data, request_number, version_number=None):
+def Filter(request, table, data, version_number=None):
   """Get 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables'.
   """
-  (handler, request_number) = DetermineHandlerModule(request)
-  
-  result = handler.Filter(connection_data, table, data, request_number)
+  result = handler.Filter(request, table, data)
   
   return result
 
@@ -214,9 +195,7 @@ def Delete(request, version_number=None):
   
   NOTE(g): Processes single record deletes directly, sends fitlered deletes to DeleteFilter()
   """
-  (handler, request_number) = DetermineHandlerModule(request)
-  
-  handler.Delete(connection_data, data)
+  return handler.Delete(request, data)
 
 
 def DeleteFilter(request, version_number=None):
@@ -229,9 +208,7 @@ def DeleteFilter(request, version_number=None):
   
   NOTE(g): This is called by Delete(), and is not invoked from the CLI directly.
   """
-  (handler, request_number) = DetermineHandlerModule(request)
-  
-  handler.DeleteFilter(connection_data, data)
+  return handler.DeleteFilter(request, data)
 
 
 
