@@ -57,13 +57,23 @@ class Request:
     self.log.append((text, data))
   
   
-  def ReleaseConnections(connection_data, request_number, handler=None):
+  def ReleaseConnections(self):
     """Release any connections we have open and tied to this request_number (wont close them)"""
-    #TODO(g): Do we every need to do more than 1 of these?  Will it ever make more?
-    if not handler:
-      (handler, _) = generic_handler.DetermineHandlerModule(connection_data, request_number)
+    #TODO(g): Remove this once the AddHandler() logic is solid.  Do that in the handler selection thing.
+    (handler, _) = generic_handler.DetermineHandlerModule(self.connection_data, self.request_number)
+    handler.ReleaseConnections(self.connection_data, self.request_number)
     
-    handler.ReleaseConnections(connection_data, request_number)
+    
+    # This is the tracked method
+    #TODO(g): We havent been adding these yet, so it wont work yet...
+    for handler in self.datasource_handlers:
+      handler.ReleaseConnections(self.connection_data, self.request_number)
+
+
+  def AddHandler(self, handler):
+    """Allows us to track all handlers that might have datasource connections for us, so we can release them explicitly and efficiently."""
+    if handler not in self.datasource_handlers:
+      self.datasource_handlers.append(handler)
 
 
   def GetRequestNumber():

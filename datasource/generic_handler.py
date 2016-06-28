@@ -70,10 +70,17 @@ def DetermineHandlerModule(request):
   
   # Test the host we found for it's connection type
   if found_server['type'] == 'mysql_56':
-    return mysql
+    handler = mysql
+  
+  else:
+    raise Exception('Unknown Data Source Type: %s' % request.request['type'])
   
   
-  raise Exception('Unknown Data Source Type: %s' % request.request['type'])
+  # Add this handler to the request (if it doesnt have it), so it knows it needs to release these connections on Request object destruction
+  request.AddHandler(handler)
+  
+  
+  return handler
 
 
 def TestConnection(request):
