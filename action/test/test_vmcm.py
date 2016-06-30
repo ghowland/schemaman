@@ -20,3 +20,27 @@ def Action(connection_data, action_input_args):
   """Perform action: Test VMCM (Version and Change Managament)"""
   print 'Test VMCM (Version and Change Managament)'
   
+  # Determine tables to operate on
+  
+  # Get original data
+  
+  # Make a change
+  
+  # Get data again (with VM changes applied)
+  
+  # Get HEAD data (without VM changed applied)
+  
+  # Abort versions of data
+  
+  # Get data again (with VM changed applied, but no change)
+  
+  # Make a change again
+  
+  # Get again, see change
+  
+  # Commit change
+  
+  # Get HEAD data, see change
+  
+  # List versions and see where our new version made that change
+  
