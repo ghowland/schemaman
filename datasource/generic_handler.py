@@ -85,6 +85,8 @@ def DetermineHandlerModule(request):
 
 def TestConnection(request):
   """Connect to the datasource's database and ensure we can read from it."""
+  handler = DetermineHandlerModule(request)
+  
   result = handler.TestConnection(request)
   
   return result
@@ -92,11 +94,15 @@ def TestConnection(request):
 
 def CreateSchema(request, schema):
   """Create a schema, based on a spec"""
+  handler = DetermineHandlerModule(request)
+  
   handler.CreateSchema(request, schema)
 
 
 def ExtractSchema(request):
   """Export a schema, based on a spec, or everything"""
+  handler = DetermineHandlerModule(request)
+  
   result = handler.ExtractSchema(request)
   
   return result
@@ -112,11 +118,15 @@ def UpdateSchema(request, schema):
   
   Can go 'forward' or 'backwards' for version control, its still updating.
   """
+  handler = DetermineHandlerModule(request)
+  
   handler.UpdateSchema(request, schema)
 
 
 def ExportData(request, path):
   """Export/dump data from this datasource, based on spec, or everything"""
+  handler = DetermineHandlerModule(request)
+  
   handler.ExportData(request, path)
 
 
@@ -132,16 +142,19 @@ def ImportData(request, drop_first=False, transaction=False):
   
   Returns: None
   """
+  handler = DetermineHandlerModule(request)
+  
   handler.ImportData(request, path)
 
 
 def RecordVersionsAvailable(request, table, record_id, username):
   """List all of the historical and currently available versions available for this record."""
+  handler = DetermineHandlerModule(request)
   
   pass#...Do this...
 
 
-def Set(request, table, data, request_number=None, commit_version=False, version_number=None):
+def Set(request, table, data, commit_version=False, version_number=None):
   """Put (insert/update) data into this datasource.
   
   Works as a single transaction.
@@ -159,6 +172,8 @@ def Set(request, table, data, request_number=None, commit_version=False, version
   
   Returns: int or None, if creating a new record this returns the newly created record primary key (ex: `id`), otherwise None
   """
+  handler = DetermineHandlerModule(request)
+  
   result = handler.Set(request, table, data)
   
   return result
@@ -180,7 +195,7 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
     
   Returns: dict, single record key/values
   """
-  (handler, request_number) = DetermineHandlerModule(request)
+  handler = DetermineHandlerModule(request)
   
   result = handler.Get(request, table, record_id, request_number)
   
@@ -192,6 +207,8 @@ def Filter(request, table, data, version_number=None):
   
   Can be a 'view', combining several lower level 'tables'.
   """
+  handler = DetermineHandlerModule(request)
+
   result = handler.Filter(request, table, data)
   
   return result
@@ -202,6 +219,8 @@ def Delete(request, version_number=None):
   
   NOTE(g): Processes single record deletes directly, sends fitlered deletes to DeleteFilter()
   """
+  handler = DetermineHandlerModule(request)
+  
   return handler.Delete(request, data)
 
 
@@ -215,6 +234,8 @@ def DeleteFilter(request, version_number=None):
   
   NOTE(g): This is called by Delete(), and is not invoked from the CLI directly.
   """
+  handler = DetermineHandlerModule(request)
+  
   return handler.DeleteFilter(request, data)
 
 

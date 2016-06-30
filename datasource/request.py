@@ -52,6 +52,7 @@ class Request:
     """Going out of scope, ensure we release any connections that we have."""
     self.ReleaseConnections(connection_data, request_number)
   
+  
   def Log(self, text, data):
     """Log any data we want to about this request."""
     self.log.append((text, data))
