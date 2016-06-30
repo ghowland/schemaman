@@ -2,5 +2,5 @@
 Datasource Module
 """
 
-from handler import *
+from generic_handler import *
 

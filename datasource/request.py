@@ -3,6 +3,9 @@ Request object to track user requests against our data sources.
 """
 
 
+import threading
+
+
 import generic_handler
 
 
@@ -50,7 +53,7 @@ class Request:
   
   def __del__(self):
     """Going out of scope, ensure we release any connections that we have."""
-    self.ReleaseConnections(connection_data, request_number)
+    self.ReleaseConnections()
   
   
   def Log(self, text, data):
@@ -77,7 +80,7 @@ class Request:
       self.datasource_handlers.append(handler)
 
 
-  def GetRequestNumber():
+  def GetRequestNumber(self):
     """Returns an int, the next available request number.
     
     This number can be used with any number of data sets simultaneously, as it is globally unique, and

@@ -52,13 +52,13 @@ def DetermineHandlerModule(request):
   """Returns the handler module, which can handle these requests."""
   # If we didnt have a server_id specified, use the master_server_id
   if request.server_id == None:
-    server_id = request.request['datasource']['master_server_id']
+    server_id = request.connection_data['datasource']['master_server_id']
   else:
     server_id = request.server_id
   
   # Find the master host, which we will assume we are connecting to for now
   found_server = None
-  for server_data in request.request['datasource']['servers']:
+  for server_data in request.connection_data['datasource']['servers']:
     if server_data['id'] == server_id:
       found_server = server_data
       break
