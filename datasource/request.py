@@ -53,7 +53,12 @@ class Request:
   
   def __del__(self):
     """Going out of scope, ensure we release any connections that we have."""
-    self.ReleaseConnections()
+    try:
+      self.ReleaseConnections()
+    
+    # Probably the interpretter is shutting down if we are getting this ("'NoneType' object is not callable"), so ignore it
+    except TypeError, e:
+      pass
   
   
   def Log(self, text, data):
@@ -63,13 +68,6 @@ class Request:
   
   def ReleaseConnections(self):
     """Release any connections we have open and tied to this request_number (wont close them)"""
-    #TODO(g): Remove this once the AddHandler() logic is solid.  Do that in the handler selection thing.
-    (handler, _) = generic_handler.DetermineHandlerModule(self.connection_data, self.request_number)
-    handler.ReleaseConnections(self.connection_data, self.request_number)
-    
-    
-    # This is the tracked method
-    #TODO(g): We havent been adding these yet, so it wont work yet...
     for handler in self.datasource_handlers:
       handler.ReleaseConnections(self.connection_data, self.request_number)
 
