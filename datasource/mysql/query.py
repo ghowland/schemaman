@@ -18,7 +18,7 @@ CONNECTION_POOL_POOL = {}
 CONNECTION_POOL_POOL_LOCK = threading.Lock()
 
 
-#TODO(g): Make this a base class, that each Handler type sub-classes.  Useful in this case, as it's an interface, and some methods are more virtual than others.
+#TODO(g): Make this a base class, that each Handler type sub-classes.  Useful in this case, as it's an interface, and some methods are more virtual than others.  It's good to have a base class for the interface, otherwise every handler implements its own base, and they seem more disconnected...
 class Connection:
 	"""This wraps MySQL connection and cursor objects, as well as tracks the progress of any requests, and if it is available for use by a new request."""
 	

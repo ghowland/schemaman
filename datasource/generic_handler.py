@@ -96,7 +96,9 @@ def CreateSchema(request, schema):
   """Create a schema, based on a spec"""
   handler = DetermineHandlerModule(request)
   
-  handler.CreateSchema(request, schema)
+  result = handler.CreateSchema(request, schema)
+  
+  return result
 
 
 def ExtractSchema(request):
@@ -110,7 +112,11 @@ def ExtractSchema(request):
 
 def ExportSchema(request, path):
   """Export a schema, based on a spec, or everything"""
+  handler = DetermineHandlerModule(request)
+  
   handler.ExportSchema(request, path)
+  
+  return result
 
 
 def UpdateSchema(request, schema):
@@ -120,14 +126,18 @@ def UpdateSchema(request, schema):
   """
   handler = DetermineHandlerModule(request)
   
-  handler.UpdateSchema(request, schema)
+  result = handler.UpdateSchema(request, schema)
+  
+  return result
 
 
 def ExportData(request, path):
   """Export/dump data from this datasource, based on spec, or everything"""
   handler = DetermineHandlerModule(request)
   
-  handler.ExportData(request, path)
+  result = handler.ExportData(request, path)
+  
+  return result
 
 
 def ImportData(request, drop_first=False, transaction=False):
@@ -144,7 +154,9 @@ def ImportData(request, drop_first=False, transaction=False):
   """
   handler = DetermineHandlerModule(request)
   
-  handler.ImportData(request, path)
+  result = handler.ImportData(request, path)
+  
+  return result
 
 
 def RecordVersionsAvailable(request, table, record_id, username=None):
@@ -161,7 +173,9 @@ def RecordVersionsAvailable(request, table, record_id, username=None):
   """
   handler = DetermineHandlerModule(request)
   
-  pass#...Do this...
+  result = handler.RecordVersionsAvailable(request, table, record_id, username=username)
+  
+  return result
 
 
 def CommitWorkingVersion(request, table, record_id):
@@ -171,8 +185,11 @@ def CommitWorkingVersion(request, table, record_id):
   
   See also: CreateChangeList() and CreateChangeListFromWorkingSet()
   """
+  handler = DetermineHandlerModule(request)
   
-  pass #...
+  result = handler.CommitWorkingVersion(request, table, record_id)
+  
+  return result
 
 
 def CreateChangeList(request, table, record_id):
@@ -183,8 +200,11 @@ def CreateChangeList(request, table, record_id):
   
   See also: CommitWorkingVersion() and CreateChangeListFromWorkingSet()
   """
+  handler = DetermineHandlerModule(request)
   
-  #...
+  result = handler.CreateChangeList(request, table, record_id)
+  
+  return result
 
 
 def CreateChangeListFromWorkingSet(request):
@@ -194,6 +214,11 @@ def CreateChangeListFromWorkingSet(request):
   
   See also: CommitWorkingVersion() and CreateChangeList()
   """
+  handler = DetermineHandlerModule(request)
+  
+  result = handler.CreateChangeListFromWorkingSet(request)
+  
+  return result
 
 
 def AbandonWorkingVersion(request, table, record_id):
@@ -204,7 +229,9 @@ def AbandonWorkingVersion(request, table, record_id):
   """
   handler = DetermineHandlerModule(request)
   
-  pass#...
+  result = handler.AbandonWorkingVersion(request, table, record_id)
+  
+  return result
 
 
 def AbandonChangeList(request, change_list_id):
@@ -212,7 +239,9 @@ def AbandonChangeList(request, change_list_id):
   """
   handler = DetermineHandlerModule(request)
   
-  pass#...
+  result = handler.AbandonChangeList(request, change_list_id)
+  
+  return result
 
 
 def Set(request, table, data, commit_version=False, version_number=None):
@@ -282,7 +311,9 @@ def Delete(request, version_number=None):
   """
   handler = DetermineHandlerModule(request)
   
-  return handler.Delete(request, data)
+  result =  handler.Delete(request, data)
+  
+  return result
 
 
 def DeleteFilter(request, version_number=None):
@@ -297,7 +328,8 @@ def DeleteFilter(request, version_number=None):
   """
   handler = DetermineHandlerModule(request)
   
-  return handler.DeleteFilter(request, data)
-
+  result = handler.DeleteFilter(request, data)
+  
+  return result
 
 
