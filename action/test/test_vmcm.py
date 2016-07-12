@@ -38,7 +38,7 @@ def Action(connection_data, action_input_args):
   record['name'] = '%s!' % record['name']
   
   # Save the change un-commited (as a version)
-  datasource.Set(request, table, record_id, record)
+  datasource.SetVersion(request, table, record_id, record)
   
   # Get data again (with VM changes applied)
   record_again = datasource.Get(request, table, record_id)
@@ -56,7 +56,7 @@ def Action(connection_data, action_input_args):
   record['name'] = '%s!' % record['name']
   
   # Save the change un-commited (as a version)
-  datasource.Set(request, table, record_id, record)
+  datasource.SetVersion(request, table, record_id, record)
   
   # Get again, see change
   record_again_again_again = datasource.Get(request, table, record_id)
