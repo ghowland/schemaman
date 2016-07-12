@@ -143,11 +143,11 @@ class Connection:
     self.cursor = self.connection.cursor(dictionary=True)
 
 
-  def Query(self, sql, params=None):
+  def Query(self, sql, params=None, commit=True):
     """Query the database via our connection."""
     print 'Query: %s' % sql
     
-    result = Query(self.connection, self.cursor, sql, params=params)
+    result = Query(self.connection, self.cursor, sql, params=params, commit=commit)
     
     return result
 
@@ -247,10 +247,12 @@ def Query(conn, cursor, sql, params=None, commit=True):
   if sql.upper().startswith('INSERT'):
     result = cursor.lastrowid
     
+    # If we should immediately commit this as a 1 query transaction
     if commit:
       conn.commit()
       
   elif sql.upper().startswith('UPDATE') or sql.upper().startswith('DELETE'):
+    # If we should immediately commit this as a 1 query transaction
     if commit:
       conn.commit()
     

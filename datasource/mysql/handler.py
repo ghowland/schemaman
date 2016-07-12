@@ -235,7 +235,7 @@ def RecordVersionsAvailable(request, table, record_id, user=user):
   return result
 
 
-def Set(request, table, data, commit_version=False, version_management=True, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG):
+def Set(request, table, data, version_management=True, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
   """Put (insert/update) data into this datasource.
   
   Works as a single transaction.
@@ -282,7 +282,7 @@ def Set(request, table, data, commit_version=False, version_management=True, ver
   
   # Query.  Will return a row_id (int) for INSERT, and None for Update
   if not noop:
-    result = connection.Query(sql, values)
+    result = connection.Query(sql, values, commit=commit)
     
     # If we did an Update, we really want the 'id' field returned, like INSERT does (consistency and not having to do this all the time after an update)
     if result == 0 and update_returns_id:

@@ -261,10 +261,38 @@ def AbandonChangeList(request, change_list_id):
   return result
 
 
-def Set(request, table, data, commit_version=False, version_management=True, version_number=None):
+def Set(request, table, data, version_management=False, commit_version=False, version_number=None, commit=True):
   """Put (insert/update) data into this datasource.
   
-  Works as a single transaction.
+  Works as a single transaction, if not using version_managament.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    data: dict, record to set into table
+    request_number: int (default None), if not None, this is a known request number, which allows us to perform
+        transactions, and re-use the same DB connections
+    commit_version: boolean (default False), if True, this will attempt to Commit the Version data after it has
+        been stored in version_change as a single record update, without any additional VMCM actions
+    version_number: int (default None), if an int, this is the version number in the version_change table to write to,
+        if None this will create a new version_working entry
+    commit: bool (default True), if not using version_management(==False) then this will be committed immediately,
+        instead of waiting for a transactional Commit()
+  
+  Returns: int or None, if creating a new record this returns the newly created record primary key (ex: `id`), otherwise None
+  """
+  handler = DetermineHandlerModule(request)
+  
+  result = handler.Set(request, table, data, version_management=version_management, commit_version=commit_version, version_number=version_number, commit=commit)
+  
+  return result
+
+
+def SetVersion(request, table, data, commit_version=False, version_number=None):
+  """Put (insert/update) data into this datasource's Version Management tables.
+  
+  This is the same as Set() except version_managament=True, which is more explicit.  This should be easier to read and type,
+  and it clearly does something different.  By default Set() will 
   
   Args:
     request: Request Object, the connection spec data and user and auth info, etc
@@ -281,7 +309,7 @@ def Set(request, table, data, commit_version=False, version_management=True, ver
   """
   handler = DetermineHandlerModule(request)
   
-  result = handler.Set(request, table, data, commit_version=commit_version, version_management=version_management, version_number=version_number)
+  result = handler.Set(request, table, data, version_management=True, commit_version=commit_version, version_number=version_number)
   
   return result
 
