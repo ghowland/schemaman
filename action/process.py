@@ -98,6 +98,19 @@ def ProcessAction(action, action_args, command_options):
       else:
         Usage('Unknown Action in Category: %s: %s' % (action_args[1], action_args[2]))
     
+    # Test
+    elif action_args[1] == 'test':
+      # Action
+      if action_args[2] == 'vmcm':
+        # if len(action_input_args) != 1:
+        #   Error('action: test: vmcm: Takes 1 argument: <path to target schema defintion YAML>')
+        
+        result = action_module.test.test_vmcm.Action(connection_data, action_input_args)
+        print result
+      
+      else:
+        Usage('Unknown Action in Category: %s: %s' % (action_args[1], action_args[2]))
+    
     else:
       Usage('Unknown Category: %s' % action_args[1])
   
