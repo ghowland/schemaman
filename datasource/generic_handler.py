@@ -159,14 +159,14 @@ def ImportData(request, drop_first=False, transaction=False):
   return result
 
 
-def GetUserId(request, username):
+def GetUser(request, username):
   """Returns user.id (int)"""
   handler = DetermineHandlerModule(request)
   
   #TODO(g): This needs to be configurable, so we can specify where to get authentication information...
-  user_id = handler.GetUserId(request, username)
+  user = handler.GetUser(request, username)
   
-  return user_id
+  return user
 
 
 def RecordVersionsAvailable(request, table, record_id, username=None):
@@ -188,9 +188,9 @@ def RecordVersionsAvailable(request, table, record_id, username=None):
   handler = DetermineHandlerModule(request)
   
   # Get the user's ID
-  user_id = GetUserId(request, username)
+  user = GetUser(request, username)
   
-  result = handler.RecordVersionsAvailable(request, table, record_id, user_id=user_id)
+  result = handler.RecordVersionsAvailable(request, table, record_id, user=user)
   
   return result
 

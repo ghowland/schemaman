@@ -143,7 +143,7 @@ def ImportData(request, drop_first=False, transaction=False):
   pass
 
 
-def GetUserId(request, username):
+def GetUser(request, username):
   """Returns user.id (int)"""
   # Get a connection
   connection = GetConnection(request)
@@ -154,12 +154,12 @@ def GetUserId(request, username):
   if not result:
     raise Exception('Unknown user: %s' % username)
   
-  user_id = result[0]['id']
+  user = result[0]
 
-  return user_id
+  return user
 
 
-def RecordVersionsAvailable(request, table, record_id, username=None):
+def RecordVersionsAvailable(request, table, record_id, user=user):
   """List all of the historical and currently available versions available for this record.
   
   Looks at 3 tables to figure this out: version_changelist_log (un-commited changes),
@@ -173,10 +173,8 @@ def RecordVersionsAvailable(request, table, record_id, username=None):
     username: string (default None), if not None, this is a specific user to check versions.  Otherwise the
         request.username is used.
     
-  Returns: ...tbd...
+  Returns: list of dicts, dicts have 'id' and 'name' fields.
   """
-  result = []
-  
   # Get a connection
   connection = GetConnection(request)
   
@@ -201,16 +199,39 @@ def RecordVersionsAvailable(request, table, record_id, username=None):
   
   
   # version_changelist_log
-  sql = "SELECT * FROM `version_changelist_log` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s"
+  sql = "SELECT * FROM `version_changelist_log` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s ORDER BY id"
   result_changelist = connection.Query(sql, [schema_id, schema_table['id'], record_id])
   
   # version_commit_log
-  sql = "SELECT * FROM `version_changelist_log` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s"
-  result_changelist = connection.Query(sql, [schema_id, schema_table['id'], record_id])
+  sql = "SELECT * FROM `version_changelist_log` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s ORDER BY id"
+  result_commit = connection.Query(sql, [schema_id, schema_table['id'], record_id])
   
   # version_working
-  sql = "SELECT * FROM `version_working` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s"
-  result_changelist = connection.Query(sql, [schema_id, schema_table['id'], record_id])
+  sql = "SELECT * FROM `version_working` WHERE user_id = %s"
+  result_working = connection.Query(sql, [user['id']])
+  
+  
+  # Compile the final result list, from the found results
+  result = []
+  
+  # Commited versions
+  for item in result_commit:
+    data = {'id': item['id'], 'name':'Commit Number: %s' % item['id']}
+    result.append(data)
+  
+  # Change List versions
+  for item in result_changelist:
+    data = {'id': item['id'], 'name':'Pending Change Number: %s' % item['id']}
+    result.append(data)
+  
+  # Working set
+  if result_working:
+    working = result_working[0]
+    if schema_id in working['data_json']:
+      if schema_table['id'] in working['data_json'][schema_id]:
+        if record_id in working['data_json'][schema_id][schema_table['id']]:
+          data = {'id':'working', 'name':'Working Version: %s' % user['name']}
+          result.append(data)
   
   
   return result
