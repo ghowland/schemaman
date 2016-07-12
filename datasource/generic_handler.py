@@ -261,6 +261,15 @@ def AbandonChangeList(request, change_list_id):
   return result
 
 
+def Commit(request):
+  """Commit a datasource transaction that is in the middle of a transaction."""
+  handler = DetermineHandlerModule(request)
+  
+  result = handler.Commit(request)
+  
+  return result
+
+
 def Set(request, table, data, version_management=False, commit_version=False, version_number=None, commit=True):
   """Put (insert/update) data into this datasource.
   
@@ -270,8 +279,7 @@ def Set(request, table, data, version_management=False, commit_version=False, ve
     request: Request Object, the connection spec data and user and auth info, etc
     table: string, name of table to operate on
     data: dict, record to set into table
-    request_number: int (default None), if not None, this is a known request number, which allows us to perform
-        transactions, and re-use the same DB connections
+    version_management: boolean (default False), if True this will use version management, if False will directly work with DB transactions
     commit_version: boolean (default False), if True, this will attempt to Commit the Version data after it has
         been stored in version_change as a single record update, without any additional VMCM actions
     version_number: int (default None), if an int, this is the version number in the version_change table to write to,
@@ -298,8 +306,6 @@ def SetVersion(request, table, data, commit_version=False, version_number=None):
     request: Request Object, the connection spec data and user and auth info, etc
     table: string, name of table to operate on
     data: dict, record to set into table
-    request_number: int (default None), if not None, this is a known request number, which allows us to perform
-        transactions, and re-use the same DB connections
     commit_version: boolean (default False), if True, this will attempt to Commit the Version data after it has
         been stored in version_change as a single record update, without any additional VMCM actions
     version_number: int (default None), if an int, this is the version number in the version_change table to write to,

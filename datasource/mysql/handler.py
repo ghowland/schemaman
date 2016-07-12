@@ -235,6 +235,15 @@ def RecordVersionsAvailable(request, table, record_id, user=user):
   return result
 
 
+def Commit(request):
+  """Commit a datasource transaction that is in the middle of a transaction."""
+  connection = GetConnection(request)
+  
+  result = connection.Commit()
+  
+  return result
+
+
 def Set(request, table, data, version_management=True, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
   """Put (insert/update) data into this datasource.
   

@@ -150,6 +150,13 @@ class Connection:
     result = Query(self.connection, self.cursor, sql, params=params, commit=commit)
     
     return result
+  
+  
+  def Commit(self):
+    """Commit a transaction in flight."""
+    result = self.connection.commit()
+    
+    return result
 
 
 def MySQLReleaseConnections(request):
