@@ -159,8 +159,22 @@ def ImportData(request, drop_first=False, transaction=False):
   return result
 
 
+def GetUserId(request, username):
+  """Returns user.id (int)"""
+  handler = DetermineHandlerModule(request)
+  
+  #TODO(g): This needs to be configurable, so we can specify where to get authentication information...
+  user_id = handler.GetUserId(request, username)
+  
+  return user_id
+
+
 def RecordVersionsAvailable(request, table, record_id, username=None):
   """List all of the historical and currently available versions available for this record.
+  
+  Looks at 3 tables to figure this out: version_changelist_log (un-commited changes),
+      version_commit_log (commited changes), version_working (single user changes)
+  
   
   Args:
     request: Request Object, the connection spec data and user and auth info, etc
@@ -173,7 +187,10 @@ def RecordVersionsAvailable(request, table, record_id, username=None):
   """
   handler = DetermineHandlerModule(request)
   
-  result = handler.RecordVersionsAvailable(request, table, record_id, username=username)
+  # Get the user's ID
+  user_id = GetUserId(request, username)
+  
+  result = handler.RecordVersionsAvailable(request, table, record_id, user_id=user_id)
   
   return result
 
@@ -244,7 +261,7 @@ def AbandonChangeList(request, change_list_id):
   return result
 
 
-def Set(request, table, data, commit_version=False, version_number=None):
+def Set(request, table, data, commit_version=False, version_management=True, version_number=None):
   """Put (insert/update) data into this datasource.
   
   Works as a single transaction.
@@ -264,7 +281,7 @@ def Set(request, table, data, commit_version=False, version_number=None):
   """
   handler = DetermineHandlerModule(request)
   
-  result = handler.Set(request, table, data)
+  result = handler.Set(request, table, data, commit_version=commit_version, version_management=version_management, version_number=version_number)
   
   return result
 
@@ -331,5 +348,4 @@ def DeleteFilter(request, version_number=None):
   result = handler.DeleteFilter(request, data)
   
   return result
-
 

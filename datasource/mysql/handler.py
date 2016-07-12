@@ -143,7 +143,80 @@ def ImportData(request, drop_first=False, transaction=False):
   pass
 
 
-def Set(request, table, data, noop=False, update_returns_id=True, debug=SQL_DEBUG):
+def GetUserId(request, username):
+  """Returns user.id (int)"""
+  # Get a connection
+  connection = GetConnection(request)
+  
+  #TODO(g): Need to specify the schema (DB) too, otherwise this is wrong...  Get from the request datasource info?  We populated, so we should know how it works...
+  sql = "SELECT * FROM `user` WHERE name = %s"
+  result = connection.Query(sql, [username])
+  if not result:
+    raise Exception('Unknown user: %s' % username)
+  
+  user_id = result[0]['id']
+
+  return user_id
+
+
+def RecordVersionsAvailable(request, table, record_id, username=None):
+  """List all of the historical and currently available versions available for this record.
+  
+  Looks at 3 tables to figure this out: version_changelist_log (un-commited changes),
+      version_commit_log (commited changes), version_working (single user changes)
+  
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    record_id: int, primary key (ex: `id`) of the record in this table.  Use Filter() to use other field values
+    username: string (default None), if not None, this is a specific user to check versions.  Otherwise the
+        request.username is used.
+    
+  Returns: ...tbd...
+  """
+  result = []
+  
+  # Get a connection
+  connection = GetConnection(request)
+  
+  # Get the schema name from our request.datasource.database
+  database_name = request['datasource']['database']
+  
+  #TODO(g): Need to specify the schema (DB) too, otherwise this is wrong...  Get from the request datasource info?  We populated, so we should know how it works...
+  sql = "SELECT * FROM schema WHERE name = %s"
+  result_schema = connection.Query(sql, [database_name])
+  if not result_schema:
+    raise Exception('Unknown schema: %s' % database_name)
+  
+  schema_id = result_schema[0]['id']
+  
+  #TODO(g): Need to specify the schema (DB) too, otherwise this is wrong...  Get from the request datasource info?  We populated, so we should know how it works...
+  sql = "SELECT * FROM schema_table WHERE schema_id = %s AND name = %s"
+  result_schema_table = connection.Query(sql, [schema_id, table])
+  if not result_schema_table:
+    raise Exception('Unknown schema_table: %s: %s' % (database_name, table))
+  
+  schema_table = result_schema_table[0]
+  
+  
+  # version_changelist_log
+  sql = "SELECT * FROM `version_changelist_log` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s"
+  result_changelist = connection.Query(sql, [schema_id, schema_table['id'], record_id])
+  
+  # version_commit_log
+  sql = "SELECT * FROM `version_changelist_log` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s"
+  result_changelist = connection.Query(sql, [schema_id, schema_table['id'], record_id])
+  
+  # version_working
+  sql = "SELECT * FROM `version_working` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s"
+  result_changelist = connection.Query(sql, [schema_id, schema_table['id'], record_id])
+  
+  
+  return result
+
+
+def Set(request, table, data, commit_version=False, version_management=True, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG):
   """Put (insert/update) data into this datasource.
   
   Works as a single transaction.
