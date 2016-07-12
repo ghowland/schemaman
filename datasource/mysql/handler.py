@@ -165,7 +165,6 @@ def RecordVersionsAvailable(request, table, record_id, user=user):
   Looks at 3 tables to figure this out: version_changelist_log (un-commited changes),
       version_commit_log (commited changes), version_working (single user changes)
   
-  
   Args:
     request: Request Object, the connection spec data and user and auth info, etc
     table: string, name of table to operate on
@@ -232,7 +231,6 @@ def RecordVersionsAvailable(request, table, record_id, user=user):
         if record_id in working['data_json'][schema_id][schema_table['id']]:
           data = {'id':'working', 'name':'Working Version: %s' % user['name']}
           result.append(data)
-  
   
   return result
 
