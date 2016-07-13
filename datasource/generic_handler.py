@@ -297,7 +297,7 @@ def Set(request, table, data, version_management=False, commit_version=False, ve
 
 
 def SetVersion(request, table, data, commit_version=False, version_number=None):
-  """Put (insert/update) data into this datasource's Version Management tables.
+  """Put (insert/update) data into this datasource's Version Management tables (working, unless version_number is specified).
   
   This is the same as Set() except version_managament=True, which is more explicit.  This should be easier to read and type,
   and it clearly does something different.  By default Set() will 
