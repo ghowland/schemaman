@@ -3,8 +3,9 @@ Handle all SchemaMan datasource specific functions: MySQL
 """
 
 
-import datasource
+import json
 
+import datasource
 from utility.log import Log
 
 from query import *
@@ -306,7 +307,8 @@ def SetVersion(request, table, data, version_management=True, commit_version=Fal
   # Get a connection
   connection = GetConnection(request)
   
-  datasource.Get
+  schema = datasource.GetInfoSchema(request)
+  schema_table = datasou.GetInfoSchemaTable(request, schema, table)
   
   # If this is a working version (no version number)
   if not version_number:
@@ -314,20 +316,68 @@ def SetVersion(request, table, data, version_management=True, commit_version=Fal
     sql = "SELECT * FROM version_working WHERE user_id = %s"
     result = connection.Query(sql, [request.user['id']])
     
-    # If we have a current working version record, use that
+    # If we have a current change version record, use that
     if result:
       record = result[0]
+      change = json.loads(record['data_json'])
     
     # Else, we dont have one yet, so create one
     else:
-      record = {}
-    
-    # Add this set data to the version working record
-    
+      record = {'user_id':request.user['id'], 'data_json':{}}
+      change = {}
+
   
   # Else, there is a version_number, so work with the version_changelist record
   else:
-    pass
+    # Get the current working record for this user (if  any)
+    #NOTE(g):SECURITY: Im not forcing that only the owner can write these here.  Is that wrong?  Should I?  I think there should be a different authorization phase...
+    sql = "SELECT * FROM version_changelist WHERE id = %s"
+    result = connection.Query(sql, [version_number)
+    
+    # Fail if we cant find this record
+    if not result:
+      raise Exception('The pending changelist was not found: %s' % version_number)
+  
+  
+  # Get the record data set up
+  if result:
+    record = result[0]
+    change = json.loads(record['data_json'])
+  
+  # Else, we dont have one yet, so create one (this can only execute on working, because we fail if we have not result with pending)
+  else:
+    record = {'user_id':request.user['id'], 'data_json':{}}
+    change = {}
+  
+  
+  # Get the primary key information for this table, and determine how to format our key
+  pass
+
+  # Format record key
+  #TODO(g): Do this properly with the above dynamic PKEY info
+  data_key = data['id']
+  
+  # Add this set data to the version change record, if it doesnt exist
+  if schema['id'] not in change:
+    change[schema['id']] = {}
+  
+  # Add this table to the change record, if it doesnt exist
+  if schema_table['id'] not in change[schema['id']]:
+    change[schema['id']][schema_table['id']] = {}
+  
+  # Readability variable
+  change_table = change[schema['id']][schema_table['id']]
+  
+  # Add this specific record
+  change_table[data_key] = data
+  
+  # Put this change record back into the version_change table, so it's saved
+  record['data_json'] = json.dumps(change_table)
+  
+  # Save the change record
+  result_record = SetDirectly(request, 'version_change', record)
+  
+  return result_record
 
 
 def SetDirectly(request, table, data, version_management=True, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
