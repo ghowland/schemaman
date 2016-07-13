@@ -49,6 +49,11 @@ class Request:
     
     # Log is a list of tuples (text, data), 
     self.log = []
+    
+    
+    # Get the user record
+    #TODO(g): Where we get the user records needs to be configurable, and currently isnt.  Fix later, same with VMCM
+    self.user = generic_handler.GetUser(self, self.username)
   
   
   def __del__(self):

@@ -159,6 +159,58 @@ def GetUser(request, username):
   return user
 
 
+def GetInfoSchema(request):
+  """Returns the record for this schema data (schema)"""
+  # Get a connection
+  connection = GetConnection(request)
+  
+  # Get the schema name from our request.datasource.database
+  database_name = request['datasource']['database']
+  
+  sql = "SELECT * FROM schema WHERE name = %s"
+  result_schema = connection.Query(sql, [database_name])
+  if not result_schema:
+    raise Exception('Unknown schema: %s' % database_name)
+  
+  schema = result_schema[0]
+  
+  return schema
+
+
+def GetInfoSchemaTable(request, schema, table):
+  """Returns the record for this schema table data (schema_table)"""
+  # Get a connection
+  connection = GetConnection(request)
+  
+  # Get the schema name from our request.datasource.database
+  database_name = request['datasource']['database']
+  
+  #TODO(g): Need to specify the schema (DB) too, otherwise this is wrong...  Get from the request datasource info?  We populated, so we should know how it works...
+  sql = "SELECT * FROM schema_table WHERE schema_id = %s AND name = %s"
+  result_schema_table = connection.Query(sql, [schema['id'], table])
+  if not result_schema_table:
+    raise Exception('Unknown schema_table: %s: %s' % (database_name, table))
+  
+  schema_table = result_schema_table[0]
+  
+  return schema_table
+
+
+def GetInfoSchemaTableField(request, schema_table, name):
+  """Returns the record for this schema field data (schema_table_field)"""
+  # Get a connection
+  connection = GetConnection(request)
+  
+  sql = "SELECT * FROM schema_table_field WHERE schema_table_id = %s AND name = %s"
+  result_schema_table_field = connection.Query(sql, [schema['id'], table])
+  if not result_schema_table_field:
+    raise Exception('Unknown schema_table_field: %s: %s: %s' % (database_name, table, name))
+  
+  schema_table = result_schema_table_field[0]
+  
+  return schema_table
+
+
 def RecordVersionsAvailable(request, table, record_id, user=user):
   """List all of the historical and currently available versions available for this record.
   
@@ -180,30 +232,20 @@ def RecordVersionsAvailable(request, table, record_id, user=user):
   # Get the schema name from our request.datasource.database
   database_name = request['datasource']['database']
   
-  #TODO(g): Need to specify the schema (DB) too, otherwise this is wrong...  Get from the request datasource info?  We populated, so we should know how it works...
-  sql = "SELECT * FROM schema WHERE name = %s"
-  result_schema = connection.Query(sql, [database_name])
-  if not result_schema:
-    raise Exception('Unknown schema: %s' % database_name)
+  # Get the schema
+  schema = GetInfoSchema(request)
   
-  schema_id = result_schema[0]['id']
-  
-  #TODO(g): Need to specify the schema (DB) too, otherwise this is wrong...  Get from the request datasource info?  We populated, so we should know how it works...
-  sql = "SELECT * FROM schema_table WHERE schema_id = %s AND name = %s"
-  result_schema_table = connection.Query(sql, [schema_id, table])
-  if not result_schema_table:
-    raise Exception('Unknown schema_table: %s: %s' % (database_name, table))
-  
-  schema_table = result_schema_table[0]
+  # Get the schema table (pass in schema so we dont do it twice)
+  schema_table = GetInfoSchemaTable(request, schema, table)
   
   
   # version_changelist_log
   sql = "SELECT * FROM `version_changelist_log` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s ORDER BY id"
-  result_changelist = connection.Query(sql, [schema_id, schema_table['id'], record_id])
+  result_changelist = connection.Query(sql, [schema['id'], schema_table['id'], record_id])
   
   # version_commit_log
   sql = "SELECT * FROM `version_changelist_log` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s ORDER BY id"
-  result_commit = connection.Query(sql, [schema_id, schema_table['id'], record_id])
+  result_commit = connection.Query(sql, [schema['id'], schema_table['id'], record_id])
   
   # version_working
   sql = "SELECT * FROM `version_working` WHERE user_id = %s"
@@ -248,6 +290,50 @@ def Set(request, table, data, version_management=True, commit_version=False, ver
   """Put (insert/update) data into this datasource.
   
   Works as a single transaction.
+  """
+  if not version_management:
+    SetDirectly(request, table, data, version_management=version_management, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug)
+  
+  else:
+    SetVersion(request, table, data, version_management=version_management, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug, commit=commit)
+
+
+def SetVersion(request, table, data, version_management=True, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG):
+  """Put (insert/update) data into this datasource.  Writes into version management tables (working or changelist if version_number is specified)
+  
+  Works as a single transaction, as version data is always commited into the version_* tables.
+  """
+  # Get a connection
+  connection = GetConnection(request)
+  
+  datasource.Get
+  
+  # If this is a working version (no version number)
+  if not version_number:
+    # Get the current working record for this user (if  any)
+    sql = "SELECT * FROM version_working WHERE user_id = %s"
+    result = connection.Query(sql, [request.user['id']])
+    
+    # If we have a current working version record, use that
+    if result:
+      record = result[0]
+    
+    # Else, we dont have one yet, so create one
+    else:
+      record = {}
+    
+    # Add this set data to the version working record
+    
+  
+  # Else, there is a version_number, so work with the version_changelist record
+  else:
+    pass
+
+
+def SetDirectly(request, table, data, version_management=True, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
+  """Put (insert/update) data into this datasource.  Directly writes to database.
+  
+  Works as a single transaction if commit==True.
   """
   # INSERT values into a table, and if they already exist, perform an UPDATE on the fields
   base_sql = "INSERT INTO `%s` (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s"

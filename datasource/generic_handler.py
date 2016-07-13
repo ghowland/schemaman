@@ -159,6 +159,33 @@ def ImportData(request, drop_first=False, transaction=False):
   return result
 
 
+def GetInfoSchema(request):
+  """Returns the record for this schema data (schema)"""
+  handler = DetermineHandlerModule(request)
+  
+  result = handler.GetInfoSchema(request)
+  
+  return result
+
+
+def GetInfoSchemaTable(request, schema, table_name):
+  """Returns the record for this schema table data (schema_table)"""
+  handler = DetermineHandlerModule(request)
+  
+  result = handler.GetInfoSchemaTable(request, schema, table_name)
+  
+  return result
+
+
+def GetInfoSchemaTableField(request, schema_table, field_name):
+  """Returns the record for this schema field data (schema_table_field)"""
+  handler = DetermineHandlerModule(request)
+  
+  result = handler.GetInfoSchemaTableField(request, schema_table, field_name)
+  
+  return result
+
+
 def GetUser(request, username):
   """Returns user.id (int)"""
   handler = DetermineHandlerModule(request)
