@@ -321,9 +321,48 @@ def AbandonWorkingVersion(request, table, record_id):
   This does not effect Change Lists that are created, which must either be editted (removing record), or else
   the entire change list must be abandonded.
   """
-  raise Exception('TBD...')
+  # Get a connection
+  connection = GetConnection(request)
   
-  return result
+  schema = datasource.GetInfoSchema(request)
+  schema_table = datasou.GetInfoSchemaTable(request, schema, table)
+  
+  # Get the current working record for this user (if  any)
+  sql = "SELECT * FROM version_working WHERE user_id = %s"
+  result = connection.Query(sql, [request.user['id']])
+  
+  # If we have a current change version record, use that
+  if result:
+    record = result[0]
+    change = json.loads(record['data_json'])
+  
+  # Else, we dont have one yet, so create one
+  else:
+    raise Exception('No version working data exists for user: %s' % request.username)
+  
+
+  # Format record key
+  #TODO(g): Do this properly with the above dynamic PKEY info.  Is this good enough because we take record_id?  Maybe this needs to already be turned into the data_key?  This definitely needs to be a First Class Citizen in schemaman
+  data_key = record_id
+  
+  # Add this set data to the version change record, if it doesnt exist
+  if schema['id'] not in change:
+    raise Exception('This user does not have the specified record in their working version: %s: %s: %s' % (request.username, table, record_id))
+  
+  # Add this table to the change record, if it doesnt exist
+  if schema_table['id'] not in change[schema['id']]:
+    raise Exception('This user does not have the specified record in their working version: %s: %s: %s' % (request.username, table, record_id))
+  
+  # Delete the record from the working version data
+  del change[schema['id']][schema_table['id']]
+  
+  # Put this change record back into the version_change table, so it's saved
+  record['data_json'] = json.dumps(change)
+  
+  # Save the change record
+  result_record = SetDirect(request, 'version_change', record)
+  
+  return result_record  
 
 
 def AbandonChangeList(request, change_list_id):
@@ -371,16 +410,6 @@ def SetVersion(request, table, data, version_management=True, commit_version=Fal
     # Get the current working record for this user (if  any)
     sql = "SELECT * FROM version_working WHERE user_id = %s"
     result = connection.Query(sql, [request.user['id']])
-    
-    # If we have a current change version record, use that
-    if result:
-      record = result[0]
-      change = json.loads(record['data_json'])
-    
-    # Else, we dont have one yet, so create one
-    else:
-      record = {'user_id':request.user['id'], 'data_json':{}}
-      change = {}
 
   
   # Else, there is a version_number, so work with the version_changelist record
