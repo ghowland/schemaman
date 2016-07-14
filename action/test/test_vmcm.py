@@ -44,7 +44,7 @@ def Action(connection_data, action_input_args):
   record_again = datasource.Get(request, table, record_id)
   
   # Get HEAD data (without VM changed applied)
-  record_head = datasource.Get(request, table, record_id)
+  record_head = datasource.Get(request, table, record_id, use_working_version=False)
   
   # Abandon working versions of data
   AbandonWorkingVersion(request, table, record_id)

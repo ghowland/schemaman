@@ -278,6 +278,62 @@ def RecordVersionsAvailable(request, table, record_id, user=user):
   return result
 
 
+def CommitWorkingVersion(request, table, record_id):
+  """Immediately takes a working version record and commits it, moving it through the rest of change management.
+  
+  This is the short-cut for Change Management, so we don't need all the steps and still have versionining.
+  
+  See also: CreateChangeList() and CreateChangeListFromWorkingSet()
+  """
+  raise Exception('TBD...')
+  
+  return result
+
+
+def CreateChangeList(request, table, record_id):
+  """Create a change list from the given table and record_id in the Working Set.
+  
+  This ensures we always have at least something in a change list, so we dont end up with empty ones where we dont know what
+  went wrong.  We will always have some indication of what was going on if we find a change list.
+  
+  See also: CommitWorkingVersion() and CreateChangeListFromWorkingSet()
+  """
+  raise Exception('TBD...')
+  
+  return result
+
+
+def CreateChangeListFromWorkingSet(request):
+  """Create a Change List from the entire Working Set of version records.
+  
+  This is a fast way to prepare to commit everything that is currently being worked on.
+  
+  See also: CommitWorkingVersion() and CreateChangeList()
+  """
+  raise Exception('TBD...')
+  
+  return result
+
+
+def AbandonWorkingVersion(request, table, record_id):
+  """Abandon any current edits in version_working for this record.
+  
+  This does not effect Change Lists that are created, which must either be editted (removing record), or else
+  the entire change list must be abandonded.
+  """
+  raise Exception('TBD...')
+  
+  return result
+
+
+def AbandonChangeList(request, change_list_id):
+  """Abandon an open Change List, change_list_id==version_change.id
+  """
+  raise Exception('TBD...')
+  
+  return result
+
+
 def Commit(request):
   """Commit a datasource transaction that is in the middle of a transaction."""
   connection = GetConnection(request)
