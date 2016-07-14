@@ -287,6 +287,10 @@ def CommitWorkingVersion(request, table, record_id):
   """
   working_version = GetUserVersionWorkingRecord(request)
   
+  record = GetRecordFromVersionRecord(request, working_version, table, record_id)
+  
+  #TODO...  The rest of the method.
+  raise Exception('TBD...')
   
   
   return result
