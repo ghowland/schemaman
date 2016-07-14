@@ -65,7 +65,7 @@ def Action(connection_data, action_input_args):
   datasource.CommitWorkingVersion(request, table, record_id)
   
   # Get HEAD data, see change
-  record_head_again = datasource.Get(request, table, record_id)
+  record_head_again = datasource.Get(request, table, record_id, use_working_version=False)
   
   # List versions and see where our new version made that change
   versions_available_again = datasource.RecordVersionsAvailable(request, table, record_id)

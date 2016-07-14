@@ -321,25 +321,11 @@ def AbandonWorkingVersion(request, table, record_id):
   This does not effect Change Lists that are created, which must either be editted (removing record), or else
   the entire change list must be abandonded.
   """
-  # Get a connection
-  connection = GetConnection(request)
+  # Get this user's working version record
+  record = GetUserVersionWorkingRecord(request)
   
-  schema = datasource.GetInfoSchema(request)
-  schema_table = datasou.GetInfoSchemaTable(request, schema, table)
-  
-  # Get the current working record for this user (if  any)
-  sql = "SELECT * FROM version_working WHERE user_id = %s"
-  result = connection.Query(sql, [request.user['id']])
-  
-  # If we have a current change version record, use that
-  if result:
-    record = result[0]
-    change = json.loads(record['data_json'])
-  
-  # Else, we dont have one yet, so create one
-  else:
-    raise Exception('No version working data exists for user: %s' % request.username)
-  
+  # Extract the data_json payload
+  change = json.loads(record['data_json'])
 
   # Format record key
   #TODO(g): Do this properly with the above dynamic PKEY info.  Is this good enough because we take record_id?  Maybe this needs to already be turned into the data_key?  This definitely needs to be a First Class Citizen in schemaman
@@ -372,6 +358,33 @@ def AbandonChangeList(request, change_list_id):
   
   return result
 
+
+def GetUserVersionWorkingRecord(request, user_id=None):
+  """Returns a dict (row) from the version_working table for this request.user"""
+  # If we werent given an explicit user, use the request user
+  if not user_id:
+    user_id = request.user['id']
+  
+  # Get a connection
+  connection = GetConnection(request)
+  
+  schema = datasource.GetInfoSchema(request)
+  schema_table = datasou.GetInfoSchemaTable(request, schema, table)
+  
+  # Get the current working record for this user (if  any)
+  sql = "SELECT * FROM version_working WHERE user_id = %s"
+  result = connection.Query(sql, [user_id])
+  
+  # If we have a current change version record, use that
+  if result:
+    record = result[0]
+  
+  # Else, we dont have one yet, so create one
+  else:
+    raise Exception('No version working data exists for user: %s' % request.username)
+  
+  return record
+  
 
 def Commit(request):
   """Commit a datasource transaction that is in the middle of a transaction."""
@@ -407,6 +420,7 @@ def SetVersion(request, table, data, version_management=True, commit_version=Fal
   
   # If this is a working version (no version number)
   if not version_number:
+    #TODO(g): Use functions like GetUserVersionWorkingRecord()?  Maybe not, I dont think it will be helpful.  Wait until later to determine how to unify this better, once I've written all the functions...  Still early...
     # Get the current working record for this user (if  any)
     sql = "SELECT * FROM version_working WHERE user_id = %s"
     result = connection.Query(sql, [request.user['id']])
