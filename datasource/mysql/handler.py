@@ -293,7 +293,7 @@ def Set(request, table, data, version_management=True, commit_version=False, ver
   Works as a single transaction.
   """
   if not version_management:
-    SetDirectly(request, table, data, version_management=version_management, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug)
+    SetDirect(request, table, data, version_management=version_management, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug)
   
   else:
     SetVersion(request, table, data, version_management=version_management, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug, commit=commit)
@@ -375,12 +375,12 @@ def SetVersion(request, table, data, version_management=True, commit_version=Fal
   record['data_json'] = json.dumps(change_table)
   
   # Save the change record
-  result_record = SetDirectly(request, 'version_change', record)
+  result_record = SetDirect(request, 'version_change', record)
   
   return result_record
 
 
-def SetDirectly(request, table, data, version_management=True, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
+def SetDirect(request, table, data, version_management=True, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
   """Put (insert/update) data into this datasource.  Directly writes to database.
   
   Works as a single transaction if commit==True.
@@ -455,7 +455,7 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
         tables.  version_change is scanned before version_commit, as these are more likely to be requested.
     use_working_version: boolean (default True), if True and version_number==None this will also look at any
         version_working data and return it instead the head table data, if it exists for this user.
-    
+  
   Returns: dict, single record key/values
   """
   # Get a connection
