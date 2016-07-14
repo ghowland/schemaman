@@ -285,7 +285,9 @@ def CommitWorkingVersion(request, table, record_id):
   
   See also: CreateChangeList() and CreateChangeListFromWorkingSet()
   """
-  raise Exception('TBD...')
+  working_version = GetUserVersionWorkingRecord(request)
+  
+  
   
   return result
 
@@ -384,6 +386,33 @@ def GetUserVersionWorkingRecord(request, user_id=None):
     raise Exception('No version working data exists for user: %s' % request.username)
   
   return record
+  
+
+def GetRecordFromVersionRecord(request, version_record, table, record_id):
+  """Get a record from a version record (could be version_working, changelist or commit row record).
+  
+  Returns: dict, row record from the version record (stored in data_json field)
+  """
+  # Get the JSON payload from the version record
+  change = json.loads(version_record['data_json'])
+  
+  # Format record key
+  #TODO(g): Do this properly with the above dynamic PKEY info
+  data_key = data['id']
+  
+  # Add this set data to the version change record, if it doesnt exist
+  if schema['id'] not in change:
+    raise RecordNotFound('Could not find version record: %s: %s: %s' % (request.username, table, record_id))
+  
+  # Add this table to the change record, if it doesnt exist
+  if schema_table['id'] not in change[schema['id']]:
+    raise RecordNotFound('Could not find version record: %s: %s: %s' % (request.username, table, record_id))
+  
+  # Ensure the record is in the table
+  if data_key not in change[schema['id']][schema_table['id']]:
+    raise RecordNotFound('Could not find version record: %s: %s: %s' % (request.username, table, record_id))
+  
+  return change[schema['id']][schema_table['id']][data_key]
   
 
 def Commit(request):

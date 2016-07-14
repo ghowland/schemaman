@@ -16,6 +16,10 @@ import tools
 import mysql
 
 
+class RecordNotFound(Exception):
+  """An expected record was not found."""
+  
+
 def LoadConnectionSpec(path):
   """Load the connection specification."""
   if not os.path.isfile(path):
