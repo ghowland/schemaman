@@ -305,6 +305,10 @@ def CommitChangeList(request, version_number):
   
   This function works as a single datasbase transaction, so it cannot leave the data in an inconsistent state.
   
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    version_number: int, this is the version number in the version_changelist.id
+  
   Returns: None
   """
   # Get the specified change list record
@@ -318,7 +322,7 @@ def CommitChangeList(request, version_number):
   SetDirect(request, 'version_commit', data, commit=False)
   
   # Create the commit_log data
-  commit_log_data = {}
+  CreateVersionLogRecords(request, 'version_commit_log', data, commit=False)
   
   # Create the version_commit_log row
   SetDirect(request, 'version_commit_log', commit_log_data, commit=False)
@@ -331,6 +335,12 @@ def CommitChangeList(request, version_number):
   
   # Commit the request
   Commit(request)
+
+
+def CreateVersionLogRecords(request, table, data, commit=True):
+  """"""
+  raise Exception('TBD...')
+  
 
 
 def CreateChangeList(request, table, data):
