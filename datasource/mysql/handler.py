@@ -291,22 +291,28 @@ def CommitWorkingVersion(request, table, record_id):
   
   #TODO...  The rest of the method.
   raise Exception('TBD...')
+
+  # Make a single record entry in the version_changelist table, do all the work as we normally would (increments the PKEY, etc)
+  
+  # "commit" the changelist into version_commit, which will also put the data into the direct DB tables
   
   
   return result
 
 
-def CreateChangeList(request, table, record_id):
+def CreateChangeList(request, table, data):
   """Create a change list from the given table and record_id in the Working Set.
   
   This ensures we always have at least something in a change list, so we dont end up with empty ones where we dont know what
   went wrong.  We will always have some indication of what was going on if we find a change list.
   
   See also: CommitWorkingVersion() and CreateChangeListFromWorkingSet()
+  
+  Returns: int, version_number for this change list
   """
   raise Exception('TBD...')
   
-  return result
+  return version_number
 
 
 def CreateChangeListFromWorkingSet(request):
@@ -315,10 +321,12 @@ def CreateChangeListFromWorkingSet(request):
   This is a fast way to prepare to commit everything that is currently being worked on.
   
   See also: CommitWorkingVersion() and CreateChangeList()
+  
+  Returns: int, version_number for this change list
   """
   raise Exception('TBD...')
   
-  return result
+  return version_number
 
 
 def AbandonWorkingVersion(request, table, record_id):
