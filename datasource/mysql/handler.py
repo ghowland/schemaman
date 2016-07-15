@@ -289,15 +289,48 @@ def CommitWorkingVersion(request, table, record_id):
   
   record = GetRecordFromVersionRecord(request, working_version, table, record_id)
   
-  #TODO...  The rest of the method.
-  raise Exception('TBD...')
-
   # Make a single record entry in the version_changelist table, do all the work as we normally would (increments the PKEY, etc)
+  version_number = CreateChangeList(request, table, record)
   
   # "commit" the changelist into version_commit, which will also put the data into the direct DB tables
-  
+  result = CommitChangeList(request, version_number)
   
   return result
+
+
+def CommitChangeList(request, version_number):
+  """Commit a pending change list (version_changelist) to the final data, and put in version_commit.
+  
+  Also updates version_changelist_log (removed entry), and version_commit_log (adds entry).
+  
+  This function works as a single datasbase transaction, so it cannot leave the data in an inconsistent state.
+  
+  Returns: None
+  """
+  # Get the specified change list record
+  record = Get(request, 'version_changelist', version_number, use_working_version=False)
+  change_json = record['data_json']
+  
+  # Create the new commit record to be inserted
+  data = {'user_id':request.user['id'], 'data_json':change_json}
+  
+  # Insert into version_commit
+  SetDirect(request, 'version_commit', data, commit=False)
+  
+  # Create the commit_log data
+  commit_log_data = {}
+  
+  # Create the version_commit_log row
+  SetDirect(request, 'version_commit_log', commit_log_data, commit=False)
+  
+  # Remove the version_changelist_log row
+  DeleteFilter(request, 'version_changelist_log', {'version_changelist_id':version_number}, commit=False)
+  
+  # Remove the version_changelist row
+  Delete(request, 'version_changelist', record['id'])
+  
+  # Commit the request
+  Commit(request)
 
 
 def CreateChangeList(request, table, data):
@@ -520,7 +553,7 @@ def SetVersion(request, table, data, version_management=True, commit_version=Fal
   return result_record
 
 
-def SetDirect(request, table, data, version_management=True, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
+def SetDirect(request, table, data, commit_version=False, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
   """Put (insert/update) data into this datasource.  Directly writes to database.
   
   Works as a single transaction if commit==True.
