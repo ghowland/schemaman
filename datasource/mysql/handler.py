@@ -313,13 +313,12 @@ def CommitChangeList(request, version_number):
   """
   # Get the specified change list record
   record = Get(request, 'version_changelist', version_number, use_working_version=False)
-  change_json = record['data_json']
   
   # Create the new commit record to be inserted
-  data = {'user_id':request.user['id'], 'data_json':change_json}
+  data = {'user_id':request.user['id'], 'data_json':record['data_json']}
   
   # Insert into version_commit
-  SetDirect(request, 'version_commit', data, commit=False)
+  version_commit_id = SetDirect(request, 'version_commit', data, commit=False)
   
   # Create the commit_log data
   CreateVersionLogRecords(request, 'version_commit_log', data, commit=False)
@@ -337,10 +336,41 @@ def CommitChangeList(request, version_number):
   Commit(request)
 
 
-def CreateVersionLogRecords(request, table, data, commit=True):
-  """"""
-  raise Exception('TBD...')
+def CreateVersionLogRecords(request, table, version_id, data, commit=True):
+  """Create all the rows needed in the `version_*_log` tables (specified by table) for the data
   
+  Version table information to stored in data['data_json'] as JSON encoded dict, which is keyed
+  on the schema.id (int), then a dict keyed on the schema_table.id (int), then the field names (string)
+  for the final dict, with values of the table field values (varying types).
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    version_id: int, the PKEY of the table record we are creating log records for
+    data: dict, record that we want to store in the table row
+    commit: boolean (default True), if True any queries that could be commited will be (single query transaction), if False then a later Commit() will be required
+  
+  Returns: list of ints, all of the PKEYs for the log rows we inserted
+  """
+  # We will return a list of ints, which are all the row `id` field values (PKEYs) for the table records
+  log_row_ids = []
+  
+  change = json.loads(data['data_json'])
+  
+  # Process all the schema table fields we need version logs for
+  for (schema_id, schema_tables) in change.items():
+    for (schema_table_id, records) in schema_tables.items():
+      for record_id in records:
+        # Create our reference field, based on the table name (ex: version_commit_id)
+        reference_field = '%s_id' % table
+        
+        # Create the log record data to insert
+        log_data = {reference_field: version_id, 'schema_id':schema_id, 'schema_table_id':schema_table_id, 'record_id':record_id}
+        
+        # Directly save this into the `version_*_log` table, with the commit flag specified
+        SetDirect(request, table, log_data, commit=commit)
+  
+  return log_row_ids
 
 
 def CreateChangeList(request, table, data):
@@ -350,6 +380,11 @@ def CreateChangeList(request, table, data):
   went wrong.  We will always have some indication of what was going on if we find a change list.
   
   See also: CommitWorkingVersion() and CreateChangeListFromWorkingSet()
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    data: dict, record that we want to store in the table row
   
   Returns: int, version_number for this change list
   """
@@ -377,6 +412,13 @@ def AbandonWorkingVersion(request, table, record_id):
   
   This does not effect Change Lists that are created, which must either be editted (removing record), or else
   the entire change list must be abandonded.
+
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    record_id: int, record `id` field, primary key
+  
+  Returns: None
   """
   # Get this user's working version record
   record = GetUserVersionWorkingRecord(request)
@@ -403,9 +445,7 @@ def AbandonWorkingVersion(request, table, record_id):
   record['data_json'] = json.dumps(change)
   
   # Save the change record
-  result_record = SetDirect(request, 'version_change', record)
-  
-  return result_record  
+  result_record = SetDirect(request, 'version_working', record)
 
 
 def AbandonChangeList(request, change_list_id):
@@ -446,6 +486,11 @@ def GetUserVersionWorkingRecord(request, user_id=None):
 def GetRecordFromVersionRecord(request, version_record, table, record_id):
   """Get a record from a version record (could be version_working, changelist or commit row record).
   
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    record_id: int, record `id` field, primary key
+    
   Returns: dict, row record from the version record (stored in data_json field)
   """
   # Get the JSON payload from the version record
@@ -471,18 +516,34 @@ def GetRecordFromVersionRecord(request, version_record, table, record_id):
   
 
 def Commit(request):
-  """Commit a datasource transaction that is in the middle of a transaction."""
+  """Commit a datasource transaction that is in the middle of a transaction.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+  
+  Returns: None
+  """
   connection = GetConnection(request)
   
-  result = connection.Commit()
-  
-  return result
+  connection.Commit()
 
 
 def Set(request, table, data, version_management=True, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
   """Put (insert/update) data into this datasource.
   
-  Works as a single transaction.
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    data: dict, record that we want to store in the table row
+    commit_version: boolean (default False), if True, this will automatically commit this version as part of this set (in version_commit)
+    version_number: int (default None), if an int, this is the version number in the version_change or version_commit
+        tables.  version_change is scanned before version_commit, as these are more likely to be requested.
+    noop: boolean (default False), if True do not actually query the database, (no operation)
+    update_returns_id: boolean (default True), if True UPDATE will return the PKEY (ex: `id`) keeping the same results that INSERT does
+    debug: boolean, if True will log more verbosely
+    commit: boolean (default True), if True any queries that could be commited will be (single query transaction), if False then a later Commit() will be required
+
+  Return: int or None, If commit_version==True then this is the real table's PKEY int, else None
   """
   if not version_management:
     SetDirect(request, table, data, version_management=version_management, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug)
@@ -495,6 +556,18 @@ def SetVersion(request, table, data, version_management=True, commit_version=Fal
   """Put (insert/update) data into this datasource.  Writes into version management tables (working or changelist if version_number is specified)
   
   Works as a single transaction, as version data is always commited into the version_* tables.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    data: dict, record that we want to store in the table row
+    commit_version: boolean (default False), if True, this will automatically commit this version as part of this set (in version_commit)
+    version_number: int (default None), if an int, this is the version number in the version_change or version_commit
+        tables.  version_change is scanned before version_commit, as these are more likely to be requested.
+    update_returns_id: boolean (default True), if True UPDATE will return the PKEY (ex: `id`) keeping the same results that INSERT does
+    debug: boolean, if True will log more verbosely
+
+  Return: int or None, If commit_version==True then this is the real table's PKEY int, else None
   """
   # Get a connection
   connection = GetConnection(request)
@@ -563,10 +636,19 @@ def SetVersion(request, table, data, version_management=True, commit_version=Fal
   return result_record
 
 
-def SetDirect(request, table, data, commit_version=False, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
+def SetDirect(request, table, data, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
   """Put (insert/update) data into this datasource.  Directly writes to database.
   
   Works as a single transaction if commit==True.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    data: dict, record that we want to store in the table row
+    noop: boolean (default False), if True do not actually query the database, (no operation)
+    update_returns_id: boolean (default True), if True UPDATE will return the PKEY (ex: `id`) keeping the same results that INSERT does
+    debug: boolean, if True will log more verbosely
+    commit: boolean (default True), if True any queries that could be commited will be (single query transaction), if False then a later Commit() will be required
   """
   # INSERT values into a table, and if they already exist, perform an UPDATE on the fields
   base_sql = "INSERT INTO `%s` (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s"
