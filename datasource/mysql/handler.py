@@ -306,7 +306,7 @@ def CommitWorkingVersion(request, table, record_id):
 def CommitChangeList(request, version_number):
   """Commit a pending change list (version_changelist) to the final data, and put in version_commit.
   
-  Also updates version_changelist_log (removed entry), and version_commit_log (adds entry).
+  Also updates version_changelist_log (removes entries), and version_commit_log (adds entries).
   
   This function works as a single datasbase transaction, so it cannot leave the data in an inconsistent state.
   
