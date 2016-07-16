@@ -35,12 +35,13 @@ def TestConnection(request):
 
 def CreateSchema(request):
   """Create a schema, based on a spec"""
+  raise Exception('TBD...')
   pass
 
 
 def ExtractSchema(request):
   """Export a schema, based on a spec, or everything"""
-  print 'MySQL: Extract Schema: %s: %s' % (request.connection_data['alias'], request.request_number)
+  Log('MySQL: Extract Schema: %s: %s' % (request.connection_data['alias'], request.request_number))
   
   connection = GetConnection(request, server_id=request.server_id)
   
@@ -113,6 +114,7 @@ def ExtractSchema(request):
 
 def ExportSchema(request):
   """Export a schema, based on a spec, or everything"""
+  raise Exception('TBD...')
   pass
 
 
@@ -121,11 +123,13 @@ def UpdateSchema(request):
   
   Can go 'forward' or 'backwards' for version control, its still updating.
   """
+  raise Exception('TBD...')
   pass
 
 
 def ExportData(request):
   """Export/dump data from this datasource, based on spec, or everything"""
+  raise Exception('TBD...')
   pass
 
 
@@ -141,6 +145,7 @@ def ImportData(request, drop_first=False, transaction=False):
   
   Returns: None
   """
+  raise Exception('TBD...')
   pass
 
 
