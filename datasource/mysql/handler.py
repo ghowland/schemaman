@@ -841,17 +841,16 @@ def DeleteFilter(request, table, data, noop=False, commit=True):
   # Wrap all keys in backticks, so they cannot conflict with SQL keywords
   keys = data.keys()
   keys.sort()
-  keys_ticked = []
   values = []
   where_format_list = []
   
   # Get our backticked wrapped insert keys, our value list, and our update setting
   for count in range(0, len(keys)):
-    # Back tick column names
-    ticked_key = '`%s`' % keys[count]
-    
     # Add the value (passed in as params list)
     values.append(data[keys[count]])
+    
+    # Back tick column names
+    ticked_key = '`%s`' % keys[count]
     
     # Add the field's where clause, value will be added through param list
     where_format_list.append('%s = %%s' % ticked_key)
