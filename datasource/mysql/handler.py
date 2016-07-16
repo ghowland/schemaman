@@ -330,7 +330,7 @@ def CommitChangeList(request, version_number):
   DeleteFilter(request, 'version_changelist_log', {'version_changelist_id':version_number}, commit=False)
   
   # Remove the version_changelist row
-  Delete(request, 'version_changelist', record['id'])
+  Delete(request, 'version_changelist', record['id'], commit=False)
   
   # Commit the request
   Commit(request)
@@ -790,23 +790,82 @@ def Filter(request, table, data):
   return rows
 
 
-def Delete(request):
+def Delete(request, table, record_id, noop=False, commit=True):
   """Delete a single record.
   
   NOTE(g): Processes single record deletes directly, sends fitlered deletes to DeleteFilter()
+
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    record_id: int, primary key (ex: `id`) of the record in this table.  Use Filter() to use other field values
+    noop: boolean (default False), if True do not actually query the database, (no operation)
+    commit: boolean (default True), if True any queries that could be commited will be (single query transaction), if False then a later Commit() will be required
+  
+  Returns: None
   """
-  pass
+  # Get a connection
+  connection = GetConnection(request)
+  
+  # Construct the query
+  sql = "DELETE FROM `%s` WHERE id = %%s" % table
+  
+  # Delete the record
+  if not noop:
+    connection.Query(sql, [record_id], commit=commit)
+  else:
+    Log('Delete NO-OP: %s: %s' % (table, record_id))
 
 
-def DeleteFilter(request):
+def DeleteFilter(request, table, data, noop=False, commit=True):
   """Delete 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables', which makes it a
   cascading delete.
   
-  Works as a single transaction.
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    data: dict, keys are strings (field names) and values are the values that must match (WHERE field=value)
+    noop: boolean (default False), if True do not actually query the database, (no operation)
+    commit: boolean (default True), if True any queries that could be commited will be (single query transaction), if False then a later Commit() will be required
   
-  NOTE(g): This is called by Delete(), and is not invoked from the CLI directly.
+  Returns: None
   """
-  pass
+  # Get a connection
+  connection = GetConnection(request)
+  
+  # INSERT values into a table, and if they already exist, perform an UPDATE on the fields
+  base_sql = "DELETE FROM `%s` WHERE %%s" % table
+  
+  # Wrap all keys in backticks, so they cannot conflict with SQL keywords
+  keys = data.keys()
+  keys.sort()
+  keys_ticked = []
+  values = []
+  where_format_list = []
+  
+  # Get our backticked wrapped insert keys, our value list, and our update setting
+  for count in range(0, len(keys)):
+    # Back tick column names
+    ticked_key = '`%s`' % keys[count]
+    
+    # Add the value (passed in as params list)
+    values.append(data[keys[count]])
+    
+    # Add the field's where clause, value will be added through param list
+    where_format_list.append('%s = %%s' % ticked_key)
+  
+  # Generate where format string from our list, always AND for this filter.  More complex logic can be done directly through SQL, it's better than trying to wrap all options
+  where_format = ' AND '.join(where_format_list)
+  
+  # Create our final SQL
+  sql = base_sql % where_format
+  
+  # If we want to perform this operation (not no-op)
+  if not noop:
+    connection.Query(sql, values, commit=commit)
+    
+  else:
+    Log('Delete Filter NO-OP: %s: %s' % (sql, values))
 
