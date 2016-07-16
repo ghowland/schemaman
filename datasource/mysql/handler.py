@@ -23,8 +23,7 @@ def ReleaseConnections(request):
 
 def TestConnection(request):
   """Create a schema, based on a spec"""
-  
-  print 'MySQL: Test Connection: %s: %s' % (request.connection_data['alias'], request.request_number)
+  Log('MySQL: Test Connection: %s: %s' % (request.connection_data['alias'], request.request_number))
   
   connection = GetConnection(request)
   
