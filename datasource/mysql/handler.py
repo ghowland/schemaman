@@ -27,6 +27,7 @@ def TestConnection(request):
   
   connection = GetConnection(request)
   
+  #TODO(g): Make a better connection test?  SELECT 1?
   result = connection.Query('SHOW TABLES')
   
   return result
