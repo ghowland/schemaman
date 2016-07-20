@@ -21,7 +21,7 @@ def Action(connection_data, action_input_args):
   print 'Test VMCM (Version and Change Managament)'
   
   # Create working Request object
-  request = datasource.Request(connection_data, 'testuser', 'testauth')
+  request = datasource.Request(connection_data, 'ghowland', 'testauth')
   
   # Determine table to operate on
   table = 'owner_group'
@@ -38,7 +38,7 @@ def Action(connection_data, action_input_args):
   record['name'] = '%s!' % record['name']
   
   # Save the change un-commited (as a version)
-  datasource.SetVersion(request, table, record_id, record)
+  datasource.SetVersion(request, table, record)
   
   # Get data again (with VM changes applied)
   record_again = datasource.Get(request, table, record_id)
@@ -56,7 +56,7 @@ def Action(connection_data, action_input_args):
   record['name'] = '%s!' % record['name']
   
   # Save the change un-commited (as a version)
-  datasource.SetVersion(request, table, record_id, record)
+  datasource.SetVersion(request, table, record)
   
   # Get again, see change
   record_again_again_again = datasource.Get(request, table, record_id)

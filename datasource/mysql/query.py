@@ -41,7 +41,12 @@ class Connection:
   
   
   def __del__(self):
-    self.Close()
+    try:
+      self.Close()
+    
+    # Ignore this failure, this happens when the context is lost, because the program is closing, and we are working with NoneTypes, instead of expected types
+    except AttributeError, e:
+      pass
 
 
   def Close(self):

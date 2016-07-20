@@ -190,9 +190,14 @@ def GetInfoSchemaTableField(request, schema_table, field_name):
   return result
 
 
-def GetUser(request, username):
+def GetUser(request, username=None):
   """Returns user.id (int)"""
   handler = DetermineHandlerModule(request)
+  
+  # We allow an explicit username, but otherwise use the requester's username
+  if not username:
+    username = request.username
+  
   
   #TODO(g): This needs to be configurable, so we can specify where to get authentication information...
   user = handler.GetUser(request, username)
@@ -373,7 +378,7 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
   """
   handler = DetermineHandlerModule(request)
   
-  result = handler.Get(request, table, record_id, request_number)
+  result = handler.Get(request, table, record_id)
   
   return result
 

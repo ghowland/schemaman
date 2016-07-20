@@ -171,9 +171,9 @@ def GetInfoSchema(request):
   connection = GetConnection(request)
   
   # Get the schema name from our request.datasource.database
-  database_name = request['datasource']['database']
+  database_name = request.connection_data['datasource']['database']
   
-  sql = "SELECT * FROM schema WHERE name = %s"
+  sql = "SELECT * FROM `schema` WHERE `name` = %s"
   result_schema = connection.Query(sql, [database_name])
   if not result_schema:
     raise Exception('Unknown schema: %s' % database_name)
@@ -189,10 +189,10 @@ def GetInfoSchemaTable(request, schema, table):
   connection = GetConnection(request)
   
   # Get the schema name from our request.datasource.database
-  database_name = request['datasource']['database']
+  database_name = request.connection_data['datasource']['database']
   
   #TODO(g): Need to specify the schema (DB) too, otherwise this is wrong...  Get from the request datasource info?  We populated, so we should know how it works...
-  sql = "SELECT * FROM schema_table WHERE schema_id = %s AND name = %s"
+  sql = "SELECT * FROM `schema_table` WHERE schema_id = %s AND name = %s"
   result_schema_table = connection.Query(sql, [schema['id'], table])
   if not result_schema_table:
     raise Exception('Unknown schema_table: %s: %s' % (database_name, table))
@@ -207,7 +207,7 @@ def GetInfoSchemaTableField(request, schema_table, name):
   # Get a connection
   connection = GetConnection(request)
   
-  sql = "SELECT * FROM schema_table_field WHERE schema_table_id = %s AND name = %s"
+  sql = "SELECT * FROM `schema_table_field` WHERE schema_table_id = %s AND name = %s"
   result_schema_table_field = connection.Query(sql, [schema['id'], table])
   if not result_schema_table_field:
     raise Exception('Unknown schema_table_field: %s: %s: %s' % (database_name, table, name))
@@ -217,7 +217,7 @@ def GetInfoSchemaTableField(request, schema_table, name):
   return schema_table
 
 
-def RecordVersionsAvailable(request, table, record_id, user=user):
+def RecordVersionsAvailable(request, table, record_id, user=None):
   """List all of the historical and currently available versions available for this record.
   
   Looks at 3 tables to figure this out: version_changelist_log (un-commited changes),
@@ -236,7 +236,7 @@ def RecordVersionsAvailable(request, table, record_id, user=user):
   connection = GetConnection(request)
   
   # Get the schema name from our request.datasource.database
-  database_name = request['datasource']['database']
+  database_name = request.connection_data['datasource']['database']
   
   # Get the schema
   schema = GetInfoSchema(request)
@@ -551,10 +551,10 @@ def Set(request, table, data, version_management=True, commit_version=False, ver
   Return: int or None, If commit_version==True then this is the real table's PKEY int, else None
   """
   if not version_management:
-    SetDirect(request, table, data, version_management=version_management, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug)
+    SetDirect(request, table, data, version_management=version_management, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug, commit=commit)
   
   else:
-    SetVersion(request, table, data, version_management=version_management, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug, commit=commit)
+    SetVersion(request, table, data, version_management=version_management, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug)
 
 
 def SetVersion(request, table, data, version_management=True, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG):
@@ -578,7 +578,7 @@ def SetVersion(request, table, data, version_management=True, commit_version=Fal
   connection = GetConnection(request)
   
   schema = datasource.GetInfoSchema(request)
-  schema_table = datasou.GetInfoSchemaTable(request, schema, table)
+  schema_table = datasource.GetInfoSchemaTable(request, schema, table)
   
   # If this is a working version (no version number)
   if not version_number:
@@ -593,7 +593,7 @@ def SetVersion(request, table, data, version_management=True, commit_version=Fal
     # Get the current working record for this user (if  any)
     #NOTE(g):SECURITY: Im not forcing that only the owner can write these here.  Is that wrong?  Should I?  I think there should be a different authorization phase...
     sql = "SELECT * FROM version_changelist WHERE id = %s"
-    result = connection.Query(sql, [version_number)
+    result = connection.Query(sql, [version_number])
     
     # Fail if we cant find this record
     if not result:

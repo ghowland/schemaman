@@ -17,7 +17,7 @@ import datasource
 import config
 import populate
 import test
-
+import action as action_module
 
 # Mode for directories we create.
 MODE_DIRECTORY = 0755
@@ -57,9 +57,9 @@ def ProcessAction(action, action_args, command_options):
   # If Action is action:  This is where we dump all kinds of functions, that dont need top-level access.  The long-tail of features.
   elif action == 'action':
     if len(action_args) < 3:
-      Usage('"init" action requires at least 3 arguments: <path schema definition YAML> <category> <action>  ...')
+      Usage('All actions requires at least 3 arguments: <path schema definition YAML> <category> <action>  ...')
     elif not os.path.isfile(action_args[0]):
-      Usage('"init" action requires arguments: %s: Is not a file' % action_args[0])
+      Usage('All actions requires arguments: %s: Is not a file' % action_args[0])
     
     schema_path = action_args[0]
     
