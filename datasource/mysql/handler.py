@@ -557,13 +557,13 @@ def Set(request, table, data, version_management=True, commit_version=False, ver
   Return: int or None, If commit_version==True then this is the real table's PKEY int, else None
   """
   if not version_management:
-    SetDirect(request, table, data, version_management=version_management, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug, commit=commit)
+    SetDirect(request, table, data, noop=noop, update_returns_id=update_returns_id, debug=debug, commit=commit)
   
   else:
-    SetVersion(request, table, data, version_management=version_management, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug)
+    SetVersion(request, table, data, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug)
 
 
-def SetVersion(request, table, data, version_management=True, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG):
+def SetVersion(request, table, data, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG):
   """Put (insert/update) data into this datasource.  Writes into version management tables (working or changelist if version_number is specified)
   
   Works as a single transaction, as version data is always commited into the version_* tables.
