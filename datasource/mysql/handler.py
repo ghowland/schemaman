@@ -556,9 +556,11 @@ def Set(request, table, data, version_management=True, commit_version=False, ver
 
   Return: int or None, If commit_version==True then this is the real table's PKEY int, else None
   """
+  # If we are directly working with database tales
   if not version_management:
     SetDirect(request, table, data, noop=noop, update_returns_id=update_returns_id, debug=debug, commit=commit)
   
+  # Else, this work should be in the version_* tables
   else:
     SetVersion(request, table, data, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug)
 

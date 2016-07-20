@@ -359,7 +359,7 @@ def SetVersion(request, table, data, commit_version=False, version_number=None):
   """
   handler = DetermineHandlerModule(request)
   
-  result = handler.Set(request, table, data, version_management=True, commit_version=commit_version, version_number=version_number)
+  result = handler.SetVersion(request, table, data, commit_version=commit_version, version_number=version_number)
   
   return result
 

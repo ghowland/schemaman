@@ -8,6 +8,7 @@ Import a schema into a set of database tables:  database, table, field
 
 # SchemaMan libraries
 import utility
+from utility.log import Log
 from utility.interactive_input import *
 import datasource
 
@@ -38,6 +39,7 @@ def Action(connection_data, action_input_args):
   record['name'] = '%s!' % record['name']
   
   # Save the change un-commited (as a version)
+  Log('Set initial changed record in version_working\n\n')
   datasource.SetVersion(request, table, record)
   
   # Get data again (with VM changes applied)
@@ -47,6 +49,7 @@ def Action(connection_data, action_input_args):
   record_head = datasource.Get(request, table, record_id, use_working_version=False)
   
   # Abandon working versions of data
+  Log('Abandon Working version\n\n')
   was_abandoned = datasource.AbandonWorkingVersion(request, table, record_id)
   
   # Get data again (with VM changed applied, but no change)
@@ -56,12 +59,14 @@ def Action(connection_data, action_input_args):
   record['name'] = '%s!' % record['name']
   
   # Save the change un-commited (as a version)
+  Log('Set second changed record in version_working\n\n')
   datasource.SetVersion(request, table, record)
   
   # Get again, see change
   record_again_again_again = datasource.Get(request, table, record_id)
   
   # Commit change
+  Log('Commit working version\n\n')
   datasource.CommitWorkingVersion(request, table, record_id)
   
   # Get HEAD data, see change
