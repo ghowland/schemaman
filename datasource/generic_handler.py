@@ -18,7 +18,11 @@ import mysql
 
 class RecordNotFound(Exception):
   """An expected record was not found."""
-  
+
+
+class VersionNotFound(Exception):
+  """Version not found.  In version_* tables."""
+
 
 def LoadConnectionSpec(path):
   """Load the connection specification."""

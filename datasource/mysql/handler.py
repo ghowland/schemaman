@@ -423,10 +423,14 @@ def AbandonWorkingVersion(request, table, record_id):
     table: string, name of table to operate on
     record_id: int, record `id` field, primary key
   
-  Returns: None
+  Returns: boolean, True if there was a working version to abandon, False if there was no working version to abandon
   """
   # Get this user's working version record
-  record = GetUserVersionWorkingRecord(request)
+  try:
+    record = GetUserVersionWorkingRecord(request)
+  
+  except datasource.VersionNotFound, e:
+    return False
   
   # Extract the data_json payload
   change = json.loads(record['data_json'])
@@ -451,6 +455,8 @@ def AbandonWorkingVersion(request, table, record_id):
   
   # Save the change record
   result_record = SetDirect(request, 'version_working', record)
+  
+  return True
 
 
 def AbandonChangeList(request, change_list_id):
@@ -471,7 +477,7 @@ def GetUserVersionWorkingRecord(request, user_id=None):
   connection = GetConnection(request)
   
   schema = datasource.GetInfoSchema(request)
-  schema_table = datasou.GetInfoSchemaTable(request, schema, table)
+  schema_table = datasource.GetInfoSchemaTable(request, schema, 'version_working')
   
   # Get the current working record for this user (if  any)
   sql = "SELECT * FROM version_working WHERE user_id = %s"
@@ -483,7 +489,7 @@ def GetUserVersionWorkingRecord(request, user_id=None):
   
   # Else, we dont have one yet, so create one
   else:
-    raise Exception('No version working data exists for user: %s' % request.username)
+    raise datasource.VersionNotFound('No version working data exists for user: %s' % request.username)
   
   return record
   
@@ -636,7 +642,7 @@ def SetVersion(request, table, data, version_management=True, commit_version=Fal
   record['data_json'] = json.dumps(change_table)
   
   # Save the change record
-  result_record = SetDirect(request, 'version_change', record)
+  result_record = SetDirect(request, 'version_changelist', record)
   
   return result_record
 
