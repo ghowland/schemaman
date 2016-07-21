@@ -300,6 +300,8 @@ def CommitWorkingVersion(request, table, record_id):
   """
   working_version = GetUserVersionWorkingRecord(request)
   
+  Log('Working version: %s', logging.DEBUG)
+  
   record = GetRecordFromVersionRecord(request, working_version, table, record_id)
   
   # Make a single record entry in the version_changelist table, do all the work as we normally would (increments the PKEY, etc)
