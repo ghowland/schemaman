@@ -440,6 +440,7 @@ def AbandonWorkingVersion(request, table, record_id):
   except datasource.VersionNotFound, e:
     return False
   
+  
   # Extract the data_json payload
   change = json.loads(record['data_json'])
 
@@ -451,19 +452,19 @@ def AbandonWorkingVersion(request, table, record_id):
   connection = GetConnection(request)
   
   # Get the schema and table info
-  (schema, schema_table) = GetInfoSchemaAndTable(request, 'version_working')  
+  (schema, schema_table) = GetInfoSchemaAndTable(request, table)
 
 
   # Add this set data to the version change record, if it doesnt exist
-  if schema['id'] not in change:
-    raise Exception('This user does not have the specified record in their working version: %s: %s: %s' % (request.username, table, record_id))
+  if str(schema['id']) not in change:
+    raise Exception('This user does not have the specified record in their working version: %s: %s: %s: %s: %s' % (request.username, table, schema['id'], schema_table['id'], record_id))
   
   # Add this table to the change record, if it doesnt exist
-  if schema_table['id'] not in change[schema['id']]:
-    raise Exception('This user does not have the specified record in their working version: %s: %s: %s' % (request.username, table, record_id))
+  if str(schema_table['id']) not in change[str(schema['id'])]:
+    raise Exception('This user does not have the specified record in their working version: %s: %s: %s: %s: %s' % (request.username, table, schema['id'], schema_table['id'], record_id))
   
   # Delete the record from the working version data
-  del change[schema['id']][schema_table['id']]
+  del change[str(schema['id'])][str(schema_table['id'])]
   
   # Put this change record back into the version_change table, so it's saved
   record['data_json'] = json.dumps(change)
@@ -522,23 +523,28 @@ def GetRecordFromVersionRecord(request, version_record, table, record_id):
   # Get the JSON payload from the version record
   change = json.loads(version_record['data_json'])
   
+  Log('GetRecordFromVersionRecord: Change: %s' % change, logging.DEBUG)
+  
   # Format record key
   #TODO(g): Do this properly with the above dynamic PKEY info
-  data_key = data['id']
+  data_key = record_id
+  
+  # Get the schema and table info
+  (schema, schema_table) = GetInfoSchemaAndTable(request, table)
   
   # Add this set data to the version change record, if it doesnt exist
-  if schema['id'] not in change:
-    raise RecordNotFound('Could not find version record: %s: %s: %s' % (request.username, table, record_id))
+  if str(schema['id']) not in change:
+    raise datasource.RecordNotFound('Could not find version record: %s: %s: %s: %s: %s' % (request.username, table, schema['id'], schema_table['id'], record_id))
   
   # Add this table to the change record, if it doesnt exist
-  if schema_table['id'] not in change[schema['id']]:
-    raise RecordNotFound('Could not find version record: %s: %s: %s' % (request.username, table, record_id))
+  if str(schema_table['id']) not in change[str(schema['id'])]:
+    raise datasource.RecordNotFound('Could not find version record: %s: %s: %s: %s' % (request.username, table, schema['id'], schema_table['id'], record_id))
   
   # Ensure the record is in the table
-  if data_key not in change[schema['id']][schema_table['id']]:
-    raise RecordNotFound('Could not find version record: %s: %s: %s' % (request.username, table, record_id))
+  if data_key not in change[str(schema['id'])][str(schema_table['id'])]:
+    raise datasource.RecordNotFound('Could not find version record: %s: %s: %s: %s: %s' % (request.username, table, schema['id'], schema_table['id'], record_id))
   
-  return change[schema['id']][schema_table['id']][data_key]
+  return change[str(schema['id'])][str(schema_table['id'])][data_key]
   
 
 def Commit(request):
