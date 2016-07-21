@@ -202,6 +202,18 @@ def GetInfoSchemaTable(request, schema, table):
   return schema_table
 
 
+def GetInfoSchemaAndTable(request, table_name):
+  """Returns the record for this schema table data (schema_table)
+  
+  This is a helper function, calls GetInfoSchema() and GetInfoSchemaTable()
+  """
+  schema = GetInfoSchema(request)
+  
+  schema_table = GetInfoSchemaTable(request, schema, table_name)
+  
+  return (schema, schema_table)
+
+
 def GetInfoSchemaTableField(request, schema_table, name):
   """Returns the record for this schema field data (schema_table_field)"""
   # Get a connection
@@ -238,12 +250,8 @@ def RecordVersionsAvailable(request, table, record_id, user=None):
   # Get the schema name from our request.datasource.database
   database_name = request.connection_data['datasource']['database']
   
-  # Get the schema
-  schema = GetInfoSchema(request)
-  
-  # Get the schema table (pass in schema so we dont do it twice)
-  schema_table = GetInfoSchemaTable(request, schema, table)
-  
+  # Get the schema and table info
+  (schema, schema_table) = GetInfoSchemaAndTable(request, table)  
   
   # version_changelist_log
   sql = "SELECT * FROM `version_changelist_log` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s ORDER BY id"
@@ -442,8 +450,8 @@ def AbandonWorkingVersion(request, table, record_id):
   # Get a connection
   connection = GetConnection(request)
   
-  schema = datasource.GetInfoSchema(request)
-  schema_table = datasource.GetInfoSchemaTable(request, schema, 'version_working')
+  # Get the schema and table info
+  (schema, schema_table) = GetInfoSchemaAndTable(request, 'version_working')  
 
 
   # Add this set data to the version change record, if it doesnt exist
@@ -483,8 +491,8 @@ def GetUserVersionWorkingRecord(request, user_id=None):
   # Get a connection
   connection = GetConnection(request)
   
-  schema = datasource.GetInfoSchema(request)
-  schema_table = datasource.GetInfoSchemaTable(request, schema, 'version_working')
+  # Get the schema and table info
+  (schema, schema_table) = GetInfoSchemaAndTable(request, 'version_working')  
   
   # Get the current working record for this user (if  any)
   sql = "SELECT * FROM version_working WHERE user_id = %s"
@@ -592,8 +600,9 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   # Get a connection
   connection = GetConnection(request)
   
-  schema = datasource.GetInfoSchema(request)
-  schema_table = datasource.GetInfoSchemaTable(request, schema, table)
+  # Get the schema and table info
+  (schema, schema_table) = GetInfoSchemaAndTable(request, table)
+
   
   # If this is a working version (no version number)
   if not version_number:
@@ -766,9 +775,7 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
 
 
 def Filter(request, table, data):
-  """Get 0 or more records from the datasource, based on filtering rules.
-  
-  Can be a 'view', combining several lower level 'tables'.
+  """Get 0 or more records from the datasource, based on filtering rules.  Works against a single table.
   """  
   base_sql = "SELECT * FROM `%s` WHERE %s"
   

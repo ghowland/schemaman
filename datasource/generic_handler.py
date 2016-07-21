@@ -185,6 +185,18 @@ def GetInfoSchemaTable(request, schema, table_name):
   return result
 
 
+def GetInfoSchemaAndTable(request, table_name):
+  """Returns the record for this schema table data (schema_table)
+  
+  This is a helper function, calls GetInfoSchema() and GetInfoSchemaTable()
+  """
+  schema = GetInfoSchema(request)
+  
+  schema_table = GetInfoSchemaTable(request, schema, table_name)
+  
+  return (schema, schema_table)
+
+
 def GetInfoSchemaTableField(request, schema_table, field_name):
   """Returns the record for this schema field data (schema_table_field)"""
   handler = DetermineHandlerModule(request)
