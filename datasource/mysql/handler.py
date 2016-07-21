@@ -439,6 +439,13 @@ def AbandonWorkingVersion(request, table, record_id):
   #TODO(g): Do this properly with the above dynamic PKEY info.  Is this good enough because we take record_id?  Maybe this needs to already be turned into the data_key?  This definitely needs to be a First Class Citizen in schemaman
   data_key = record_id
   
+  # Get a connection
+  connection = GetConnection(request)
+  
+  schema = datasource.GetInfoSchema(request)
+  schema_table = datasource.GetInfoSchemaTable(request, schema, 'version_working')
+
+
   # Add this set data to the version change record, if it doesnt exist
   if schema['id'] not in change:
     raise Exception('This user does not have the specified record in their working version: %s: %s: %s' % (request.username, table, record_id))
@@ -492,7 +499,7 @@ def GetUserVersionWorkingRecord(request, user_id=None):
     raise datasource.VersionNotFound('No version working data exists for user: %s' % request.username)
   
   return record
-  
+
 
 def GetRecordFromVersionRecord(request, version_record, table, record_id):
   """Get a record from a version record (could be version_working, changelist or commit row record).
@@ -594,6 +601,9 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
     # Get the current working record for this user (if  any)
     sql = "SELECT * FROM version_working WHERE user_id = %s"
     result = connection.Query(sql, [request.user['id']])
+    
+    # Which table are we working with?  No version is working table
+    version_table = 'version_working'
 
   
   # Else, there is a version_number, so work with the version_changelist record
@@ -606,6 +616,10 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
     # Fail if we cant find this record
     if not result:
       raise Exception('The pending changelist was not found: %s' % version_number)
+    
+    # Which table are we working with?  We have a version number, so it's changelist
+    version_table = 'version_changelist'
+    
   
   
   # Get the record data set up
@@ -642,9 +656,9 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   
   # Put this change record back into the version_change table, so it's saved
   record['data_json'] = json.dumps(change_table)
-  
+    
   # Save the change record
-  result_record = SetDirect(request, 'version_changelist', record)
+  result_record = SetDirect(request, version_table, record)
   
   return result_record
 
