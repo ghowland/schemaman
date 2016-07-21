@@ -21,6 +21,11 @@ CONNECTION_POOL_POOL = {}
 CONNECTION_POOL_POOL_LOCK = threading.Lock()
 
 
+# Default MySQL connection character set
+# DEFAULT_CHARSET = 'utf8'
+DEFAULT_CHARSET = 'latin1'
+
+
 #TODO(g): Make this a base class, that each Handler type sub-classes.  Useful in this case, as it's an interface, and some methods are more virtual than others.  It's good to have a base class for the interface, otherwise every handler implements its own base, and they seem more disconnected...
 class Connection:
   """This wraps MySQL connection and cursor objects, as well as tracks the progress of any requests, and if it is available for use by a new request."""
@@ -152,7 +157,7 @@ class Connection:
       Log('ERROR: Failed to read from password file: %s' % server['password_path'], logging.ERROR)
       password = None
     
-    self.connection = mysql.connector.connect(user=server['user'], password=password, host=server['host'], port=server['port'], database=server['database'], use_unicode=True, charset='latin1')
+    self.connection = mysql.connector.connect(user=server['user'], password=password, host=server['host'], port=server['port'], database=server['database'], use_unicode=True, charset=DEFAULT_CHARSET)
     self.cursor = self.connection.cursor(dictionary=True)
 
 
