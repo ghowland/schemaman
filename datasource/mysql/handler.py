@@ -663,7 +663,7 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   change_table[data_key] = data
   
   # Put this change record back into the version_change table, so it's saved
-  record['data_json'] = json.dumps(change_table)
+  record['data_json'] = json.dumps(change)
     
   # Save the change record
   result_record = SetDirect(request, version_table, record)
