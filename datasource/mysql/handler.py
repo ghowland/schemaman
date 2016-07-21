@@ -6,6 +6,7 @@ Handle all SchemaMan datasource specific functions: MySQL
 import json
 
 import datasource
+import utility
 from utility.log import Log
 
 from query import *
@@ -282,11 +283,14 @@ def RecordVersionsAvailable(request, table, record_id, user=None):
   # Working set
   if result_working:
     working = result_working[0]
-    if str(schema['id']) in working['data_json']:
-      if str(schema_table['id']) in working['data_json'][schema['id']]:
-        if record_id in working['data_json'][schema_id][schema_table['id']]:
-          data = {'id':'working', 'name':'Working Version: %s' % user['name']}
-          result.append(data)
+    
+    data = utility.path.LoadYamlFromString(working['data_yaml'])
+    
+    if schema['id'] in data:
+      if schema_table['id'] in data[schema['id']]:
+        if record_id in data[schema['id']][schema_table['id']]:
+          item = {'id':'working', 'name':'Working Version: %s' % user['name']}
+          result.append(item)
   
   return result
 
@@ -299,8 +303,6 @@ def CommitWorkingVersion(request, table, record_id):
   See also: CreateChangeList() and CreateChangeListFromWorkingSet()
   """
   working_version = GetUserVersionWorkingRecord(request)
-  
-  Log('Working version: %s', logging.DEBUG)
   
   record = GetRecordFromVersionRecord(request, working_version, table, record_id)
   
@@ -330,7 +332,7 @@ def CommitChangeList(request, version_number):
   record = Get(request, 'version_changelist', version_number, use_working_version=False)
   
   # Create the new commit record to be inserted
-  data = {'user_id':request.user['id'], 'data_json':record['data_json']}
+  data = {'user_id':request.user['id'], 'data_yaml':record['data_yaml']}
   
   # Insert into version_commit
   version_commit_id = SetDirect(request, 'version_commit', data, commit=False)
@@ -354,7 +356,7 @@ def CommitChangeList(request, version_number):
 def CreateVersionLogRecords(request, table, version_id, data, commit=True):
   """Create all the rows needed in the `version_*_log` tables (specified by table) for the data
   
-  Version table information to stored in data['data_json'] as JSON encoded dict, which is keyed
+  Version table information to stored in data['data_yaml'] as JSON encoded dict, which is keyed
   on the schema.id (int), then a dict keyed on the schema_table.id (int), then the field names (string)
   for the final dict, with values of the table field values (varying types).
   
@@ -370,7 +372,7 @@ def CreateVersionLogRecords(request, table, version_id, data, commit=True):
   # We will return a list of ints, which are all the row `id` field values (PKEYs) for the table records
   log_row_ids = []
   
-  change = json.loads(data['data_json'])
+  change = utility.path.LoadYamlFromString(data['data_yaml'])
   
   # Process all the schema table fields we need version logs for
   for (schema_id, schema_tables) in change.items():
@@ -443,8 +445,8 @@ def AbandonWorkingVersion(request, table, record_id):
     return False
   
   
-  # Extract the data_json payload
-  change = json.loads(record['data_json'])
+  # Extract the data_yaml payload
+  change = utility.path.LoadYamlFromString(record['data_yaml'])
 
   # Format record key
   #TODO(g): Do this properly with the above dynamic PKEY info.  Is this good enough because we take record_id?  Maybe this needs to already be turned into the data_key?  This definitely needs to be a First Class Citizen in schemaman
@@ -458,18 +460,19 @@ def AbandonWorkingVersion(request, table, record_id):
 
 
   # Add this set data to the version change record, if it doesnt exist
-  if str(schema['id']) not in change:
+  if schema['id'] not in change:
     raise Exception('This user does not have the specified record in their working version: %s: %s: %s: %s: %s' % (request.username, table, schema['id'], schema_table['id'], record_id))
   
   # Add this table to the change record, if it doesnt exist
-  if str(schema_table['id']) not in change[str(schema['id'])]:
+  if schema_table['id'] not in change[schema['id']]:
     raise Exception('This user does not have the specified record in their working version: %s: %s: %s: %s: %s' % (request.username, table, schema['id'], schema_table['id'], record_id))
   
   # Delete the record from the working version data
-  del change[str(schema['id'])][str(schema_table['id'])]
+  del change[schema['id']][schema_table['id']]
   
   # Put this change record back into the version_change table, so it's saved
-  record['data_json'] = json.dumps(change)
+  record['data_yaml'] = utility.path.DumpYamlAsString(change)
+
   
   # Save the change record
   result_record = SetDirect(request, 'version_working', record)
@@ -520,10 +523,10 @@ def GetRecordFromVersionRecord(request, version_record, table, record_id):
     table: string, name of table to operate on
     record_id: int, record `id` field, primary key
     
-  Returns: dict, row record from the version record (stored in data_json field)
+  Returns: dict, row record from the version record (stored in data_yaml field)
   """
   # Get the JSON payload from the version record
-  change = json.loads(version_record['data_json'])
+  change = utility.path.LoadYamlFromString(version_record['data_yaml'])
   
   Log('GetRecordFromVersionRecord: Change: %s' % change, logging.DEBUG)
   
@@ -535,18 +538,18 @@ def GetRecordFromVersionRecord(request, version_record, table, record_id):
   (schema, schema_table) = GetInfoSchemaAndTable(request, table)
   
   # Add this set data to the version change record, if it doesnt exist
-  if str(schema['id']) not in change:
+  if schema['id'] not in change:
     raise datasource.RecordNotFound('Could not find version record: %s: %s: %s: %s: %s' % (request.username, table, schema['id'], schema_table['id'], record_id))
   
   # Add this table to the change record, if it doesnt exist
-  if str(schema_table['id']) not in change[str(schema['id'])]:
+  if schema_table['id'] not in change[schema['id']]:
     raise datasource.RecordNotFound('Could not find version record: %s: %s: %s: %s' % (request.username, table, schema['id'], schema_table['id'], record_id))
   
   # Ensure the record is in the table
-  if data_key not in change[str(schema['id'])][str(schema_table['id'])]:
+  if data_key not in change[schema['id']][schema_table['id']]:
     raise datasource.RecordNotFound('Could not find version record: %s: %s: %s: %s: %s' % (request.username, table, schema['id'], schema_table['id'], record_id))
   
-  return change[str(schema['id'])][str(schema_table['id'])][data_key]
+  return change[schema['id']][schema_table['id']][data_key]
   
 
 def Commit(request):
@@ -641,11 +644,11 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   # Get the record data set up
   if result:
     record = result[0]
-    change = json.loads(record['data_json'])
+    change = utility.path.LoadYamlFromString(record['data_yaml'])
   
   # Else, we dont have one yet, so create one (this can only execute on working, because we fail if we have not result with pending)
   else:
-    record = {'user_id':request.user['id'], 'data_json':{}}
+    record = {'user_id':request.user['id'], 'data_yaml':{}}
     change = {}
   
   
@@ -671,7 +674,7 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   change_table[data_key] = data
   
   # Put this change record back into the version_change table, so it's saved
-  record['data_json'] = json.dumps(change)
+  record['data_yaml'] = utility.path.DumpYamlAsString(change)
     
   # Save the change record
   result_record = SetDirect(request, version_table, record)
