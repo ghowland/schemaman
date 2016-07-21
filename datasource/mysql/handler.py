@@ -274,8 +274,8 @@ def RecordVersionsAvailable(request, table, record_id, user=None):
   # Working set
   if result_working:
     working = result_working[0]
-    if schema_id in working['data_json']:
-      if schema_table['id'] in working['data_json'][schema_id]:
+    if str(schema['id']) in working['data_json']:
+      if str(schema_table['id']) in working['data_json'][schema['id']]:
         if record_id in working['data_json'][schema_id][schema_table['id']]:
           data = {'id':'working', 'name':'Working Version: %s' % user['name']}
           result.append(data)
@@ -619,7 +619,6 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
     
     # Which table are we working with?  We have a version number, so it's changelist
     version_table = 'version_changelist'
-    
   
   
   # Get the record data set up
@@ -724,7 +723,7 @@ def SetDirect(request, table, data, noop=False, update_returns_id=True, debug=SQ
     # If we did an Update, we really want the 'id' field returned, like INSERT does (consistency and not having to do this all the time after an update)
     if result == 0 and update_returns_id:
       # This should always return a single dict in a list, due to our uniqueness constraints
-      rows = Filter(connection_data, table, data, request_number)
+      rows = Filter(request, table, data)
       result = rows[0]['id']
     
   else:

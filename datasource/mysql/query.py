@@ -4,9 +4,12 @@ Datasource: MySQL: Querying
 
 
 import threading
+import logging
 
 import mysql.connector
 from mysql.connector import errorcode
+
+from utility.log import Log
 
 
 # Default connection pool size.  Override with connection_data
@@ -23,6 +26,8 @@ class Connection:
   """This wraps MySQL connection and cursor objects, as well as tracks the progress of any requests, and if it is available for use by a new request."""
   
   def __init__(self, connection_data, server_id, request):
+    Log('Creating new connection: MySQL: %s' % connection_data['datasource']['database'])
+    
     # We need these to actually connect
     self.connection_data = connection_data
     self.server_id = server_id
@@ -71,6 +76,9 @@ class Connection:
 
   def Acquire(self, request):
     """Acquire this Connection for this Request."""
+    if self.request != None:
+      raise Exception('Attempting to Acquire a Connection when it is already owned: %s' % request)
+    
     self.request = request
 
   
@@ -133,15 +141,15 @@ class Connection:
     """Connect to the database"""
     server = self.GetServerData()
     
-    print 'Connecting to MySQL server: %s: %s' % (server['host'], server['database'])
+    Log('Connecting to MySQL server: %s: %s' % (server['host'], server['database']))
     
     # Read the password from the first line of the password file
     try:
       password = open(server['password_path']).read().split('\n', 1)[0]
-      print 'Loaded password: %s' % server['password_path']
+      Log('Loaded password: %s' % server['password_path'])
       
     except Exception, e:
-      print 'ERROR: Failed to read from password file: %s' % server['password_path']
+      Log('ERROR: Failed to read from password file: %s' % server['password_path'], logging.ERROR)
       password = None
     
     self.connection = mysql.connector.connect(user=server['user'], password=password, host=server['host'], port=server['port'], database=server['database'], use_unicode=True, charset='latin1')
@@ -150,7 +158,7 @@ class Connection:
 
   def Query(self, sql, params=None, commit=True):
     """Query the database via our connection."""
-    print 'Query: %s' % sql
+    Log('Query: %s' % sql)
     
     result = Query(self.connection, self.cursor, sql, params=params, commit=commit)
     
@@ -188,7 +196,9 @@ def GetConnection(request, server_id=None):
   global CONNECTION_POOL_POOL
   
   # If we didnt have a server_id specified, use the master_server_id
-  if request.server_id == None:
+  if server_id != None:
+    server_id = server_id
+  elif request.server_id == None:
     server_id = request.connection_data['datasource']['master_server_id']
   else:
     server_id = request.server_id
@@ -204,7 +214,7 @@ def GetConnection(request, server_id=None):
 
   # Generate the server key, since this specifies which CONNECTION_POOL_POOL we are in
   #TODO(g): Turn this into a function?  I have to duplicate this from the connection class otherwise...  Or only do it here?
-  server_key = '%s.%s' % (request.connection_data['alias'], request.server_id)
+  server_key = '%s.%s' % (request.connection_data['alias'], server_id)
 
 
   # Look through the current connection pool, to see if we already have a connection for this request_number
@@ -223,8 +233,6 @@ def GetConnection(request, server_id=None):
         #TODO(g): Make this a method to set it to this request
         connection.Acquire(request)
         return connection
-  
-
 
   
   # Create the connection
@@ -235,7 +243,7 @@ def GetConnection(request, server_id=None):
   if connection.server_key not in CONNECTION_POOL_POOL:
     try:
       CONNECTION_POOL_POOL_LOCK.acquire()
-      print 'Creating new MySQL connection pool: %s' % connection.server_key
+      Log('Creating new MySQL connection pool: %s' % connection.server_key)
       CONNECTION_POOL_POOL[connection.server_key] = [connection]
     finally:
       CONNECTION_POOL_POOL_LOCK.release()
@@ -244,7 +252,7 @@ def GetConnection(request, server_id=None):
   else:
     try:
       CONNECTION_POOL_POOL_LOCK.acquire()
-      print 'Appending to existing MySQL connection pool: %s' % connection.server_key
+      Log('Appending to existing MySQL connection pool: %s' % connection.server_key)
       CONNECTION_POOL_POOL[connection.server_key].append(connection)
     finally:
       CONNECTION_POOL_POOL_LOCK.release()
