@@ -67,7 +67,7 @@ def Action(connection_data, action_input_args):
   
   # Commit change
   Log('Commit working version\n\n')
-  datasource.CommitWorkingVersion(request, table, record_id)
+  datasource.CommitWorkingVersion(request)
   
   # Get HEAD data, see change
   record_head_again = datasource.Get(request, table, record_id, use_working_version=False)

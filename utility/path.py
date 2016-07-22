@@ -5,8 +5,8 @@ Standard operations are wrapped here to be shorter and also to provide a place t
 """
 
 
-import collections
 import yaml
+import collections
 import StringIO
 
 try:

@@ -3,8 +3,6 @@ Handle all SchemaMan datasource specific functions: MySQL
 """
 
 
-import json
-
 import datasource
 import utility
 from utility.log import Log
@@ -295,19 +293,49 @@ def RecordVersionsAvailable(request, table, record_id, user=None):
   return result
 
 
-def CommitWorkingVersion(request, table, record_id):
-  """Immediately takes a working version record and commits it, moving it through the rest of change management.
+def CommitWorkingVersion(request):
+  """Immediately takes everything in this user's Working Set and creates a change list.
+  
+  This is the short-cut for Change Management, so we don't need all the steps and still have versionining.
+  
+  See also: CreateChangeList() and CreateChangeListFromWorkingSet() and CommitWorkingVersionSingleRecord()
+  """
+  working_version = GetUserVersionWorkingRecord(request)
+  
+  # Make a single record entry in the version_changelist table, do all the work as we normally would (increments the PKEY, etc)
+  version_number = CreateChangeList(request, working_version)
+  
+  # "commit" the changelist into version_commit, which will also put the data into the direct DB tables
+  result = CommitChangeList(request, version_number)
+  
+  # Clean up the working version
+  raise Exception('Clean up the working version, we just left that there after making the Change List and commiting it...  Also, transactions?  Make sure thats OK too.  Commit on end?  New request for versions?  Clone request to get new connection/transaction?  Yes.')
+  
+  return result
+
+
+def CommitWorkingVersionSingleRecord(request, table, record_id):
+  """TODO: Commit only a single record out of the working version.  Not all the working version records...
+  
+  Immediately takes a working version record and commits it, moving it through the rest of change management.
   
   This is the short-cut for Change Management, so we don't need all the steps and still have versionining.
   
   See also: CreateChangeList() and CreateChangeListFromWorkingSet()
   """
+  raise Exception('TBD...')
+
   working_version = GetUserVersionWorkingRecord(request)
   
   record = GetRecordFromVersionRecord(request, working_version, table, record_id)
+
+  #TODO(g): Format the record so it is wrapped in it's schema/schema_table/record dicts, as it is a full change now
+  pass
+  wrapped_record = None
+  pass
   
   # Make a single record entry in the version_changelist table, do all the work as we normally would (increments the PKEY, etc)
-  version_number = CreateChangeList(request, table, record)
+  version_number = CreateChangeList(request, wrapped_record)
   
   # "commit" the changelist into version_commit, which will also put the data into the direct DB tables
   result = CommitChangeList(request, version_number)
@@ -375,7 +403,12 @@ def CreateVersionLogRecords(request, version_table, version_id, data, commit=Tru
   # We will return a list of ints, which are all the row `id` field values (PKEYs) for the table records
   log_row_ids = []
   
+  
+  Log('Change Log: %s' % data, logging.DEBUG)
+  
   change = utility.path.LoadYamlFromString(data['data_yaml'])
+  
+  Log('Writing version log records for: %s' % change, logging.DEBUG)
   
   # Process all the schema table fields we need version logs for
   for (schema_id, schema_tables) in change.items():
@@ -393,7 +426,7 @@ def CreateVersionLogRecords(request, version_table, version_id, data, commit=Tru
   return log_row_ids
 
 
-def CreateChangeList(request, table, data):
+def CreateChangeList(request, data):
   """Create a change list from the given table and record_id from the Working Set.
   
   This ensures we always have at least something in a change list, so we dont end up with empty ones where we dont know what
@@ -408,6 +441,8 @@ def CreateChangeList(request, table, data):
   
   Returns: int, version_number for this change list
   """
+  Log('Create change list: %s' % data)
+  
   data_yaml = utility.path.DumpYamlAsString(data)
   
   # Create the changelist record

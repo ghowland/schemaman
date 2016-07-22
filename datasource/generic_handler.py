@@ -4,7 +4,6 @@
 import os
 import threading
 
-
 from utility.error import *
 from utility.path import *
 
@@ -247,21 +246,37 @@ def RecordVersionsAvailable(request, table, record_id, username=None):
   return result
 
 
-def CommitWorkingVersion(request, table, record_id):
-  """Immediately takes a working version record and commits it, moving it through the rest of change management.
+def CommitWorkingVersion(request):
+  """Immediately takes everything in this user's Working Set and creates a change list.
   
   This is the short-cut for Change Management, so we don't need all the steps and still have versionining.
   
-  See also: CreateChangeList() and CreateChangeListFromWorkingSet()
+  See also: CreateChangeList() and CreateChangeListFromWorkingSet() and CommitWorkingVersionSingleRecord()
   """
   handler = DetermineHandlerModule(request)
   
-  result = handler.CommitWorkingVersion(request, table, record_id)
+  result = handler.CommitWorkingVersion(request)
   
   return result
 
 
-def CreateChangeList(request, table, data):
+def CommitWorkingVersionSingleRecord(request, table, record_id):
+  """TODO: Commit only a single record out of the working version.  Not all the working version records...
+  
+  Immediately takes a working version record and commits it, moving it through the rest of change management.
+  
+  This is the short-cut for Change Management, so we don't need all the steps and still have versionining.
+  
+  See also: CreateChangeList() and CreateChangeListFromWorkingSet() and CommitWorkingVersion()
+  """
+  handler = DetermineHandlerModule(request)
+  
+  result = handler.CommitWorkingVersionSingleRecord(request, table, record_id)
+  
+  return result
+
+
+def CreateChangeList(request, data):
   """Create a change list from the given table and record_id in the Working Set.
   
   This ensures we always have at least something in a change list, so we dont end up with empty ones where we dont know what
@@ -273,7 +288,7 @@ def CreateChangeList(request, table, data):
   """
   handler = DetermineHandlerModule(request)
   
-  result = handler.CreateChangeList(request, table, record_id)
+  result = handler.CreateChangeList(request, record_id)
   
   return result
 
