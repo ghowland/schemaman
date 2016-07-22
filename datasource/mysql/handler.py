@@ -312,6 +312,9 @@ def CommitWorkingVersion(request, table, record_id):
   # "commit" the changelist into version_commit, which will also put the data into the direct DB tables
   result = CommitChangeList(request, version_number)
   
+  # Clean up the working version
+  raise Exception('Clean up the working version, we just left that there after making the Change List and commiting it...  Also, transactions?  Make sure thats OK too.  Commit on end?  New request for versions?  Clone request to get new connection/transaction?  Yes.')
+  
   return result
 
 
@@ -353,7 +356,7 @@ def CommitChangeList(request, version_number):
   Commit(request)
 
 
-def CreateVersionLogRecords(request, table, version_id, data, commit=True):
+def CreateVersionLogRecords(request, version_table, version_id, data, commit=True):
   """Create all the rows needed in the `version_*_log` tables (specified by table) for the data
   
   Version table information to stored in data['data_yaml'] as JSON encoded dict, which is keyed
@@ -362,7 +365,7 @@ def CreateVersionLogRecords(request, table, version_id, data, commit=True):
   
   Args:
     request: Request Object, the connection spec data and user and auth info, etc
-    table: string, name of table to operate on
+    version_table: string, name of table to operate on
     version_id: int, the PKEY of the table record we are creating log records for
     data: dict, record that we want to store in the table row
     commit: boolean (default True), if True any queries that could be commited will be (single query transaction), if False then a later Commit() will be required
@@ -379,19 +382,19 @@ def CreateVersionLogRecords(request, table, version_id, data, commit=True):
     for (schema_table_id, records) in schema_tables.items():
       for record_id in records:
         # Create our reference field, based on the table name (ex: version_commit_id)
-        reference_field = '%s_id' % table
+        reference_field = '%s_id' % version_table
         
         # Create the log record data to insert
         log_data = {reference_field: version_id, 'schema_id':schema_id, 'schema_table_id':schema_table_id, 'record_id':record_id}
         
         # Directly save this into the `version_*_log` table, with the commit flag specified
-        SetDirect(request, table, log_data, commit=commit)
+        SetDirect(request, version_table, log_data, commit=commit)
   
   return log_row_ids
 
 
 def CreateChangeList(request, table, data):
-  """Create a change list from the given table and record_id in the Working Set.
+  """Create a change list from the given table and record_id from the Working Set.
   
   This ensures we always have at least something in a change list, so we dont end up with empty ones where we dont know what
   went wrong.  We will always have some indication of what was going on if we find a change list.
@@ -405,7 +408,16 @@ def CreateChangeList(request, table, data):
   
   Returns: int, version_number for this change list
   """
-  raise Exception('TBD...')
+  data_yaml = utility.path.DumpYamlAsString(data)
+  
+  # Create the changelist record
+  record = {'user_id':request.user['id'], 'data_yaml':data_yaml}
+  
+  # Create this version changelist, and get the version number
+  version_number = SetDirect(request, 'version_changelist', record)
+  
+  # Create the version log for this changelist
+  CreateVersionLogRecords(request, 'version_changelist', version_number, record)
   
   return version_number
 

@@ -58,10 +58,11 @@ def LoadYamlFromString(text):
   return result
 
 
-def DumpYamlAsString(data):
+def DumpYamlAsString(data, deep_unicode_conversion=False):
   """Wraps dumping YAML, in the way we need it to diff against existing YAML."""
   # Convert all unicode to strings, to get rid of annoying YAML formatting
-  data = DeepUnicodeToString(data)
+  if deep_unicode_conversion:
+    data = DeepUnicodeToString(data)
   
   # Better than safe_dump, for clarity.
   result = yaml.dump(data, Dumper=SafeDumper)
