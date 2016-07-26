@@ -182,7 +182,7 @@ def GetInfoSchema(request):
   return schema
 
 
-def GetInfoSchemaTable(request, schema, table):
+def GetInfoSchemaTable(request, schema, table, filter_key='name'):
   """Returns the record for this schema table data (schema_table)"""
   # Get a connection
   connection = GetConnection(request)
@@ -191,7 +191,7 @@ def GetInfoSchemaTable(request, schema, table):
   database_name = request.connection_data['datasource']['database']
   
   #TODO(g): Need to specify the schema (DB) too, otherwise this is wrong...  Get from the request datasource info?  We populated, so we should know how it works...
-  sql = "SELECT * FROM `schema_table` WHERE schema_id = %s AND name = %s"
+  sql = "SELECT * FROM `schema_table` WHERE schema_id = %%s AND %s = %%s" % filter_key
   result_schema_table = connection.Query(sql, [schema['id'], table])
   if not result_schema_table:
     raise Exception('Unknown schema_table: %s: %s' % (database_name, table))
@@ -209,6 +209,18 @@ def GetInfoSchemaAndTable(request, table_name):
   schema = GetInfoSchema(request)
   
   schema_table = GetInfoSchemaTable(request, schema, table_name)
+  
+  return (schema, schema_table)
+
+
+def GetInfoSchemaAndTableById(request, schema_table_id):
+  """Returns the record for this schema table data (schema_table)
+  
+  This is a helper function, calls GetInfoSchema() and GetInfoSchemaTable()
+  """
+  schema = GetInfoSchema(request)
+  
+  schema_table = GetInfoSchemaTable(request, schema, schema_table_id, filter_key='id')
   
   return (schema, schema_table)
 
@@ -379,13 +391,42 @@ def CommitChangeList(request, version_number):
   # Remove the version_changelist row
   Delete(request, 'version_changelist', record['id'], commit=False)
   
-  
   # Make the change to the tables that are effected
-  pass
-  
+  __CommitVersionRecordToDatasource(request, version_commit_id, record, commit=False)
   
   # Commit the request
   Commit(request)
+
+
+def __CommitVersionRecordToDatasource(request, version_commit_id, change_record, commit=True):
+  """Commit a change from the version_commit table into the real (non-versioning) datasource tables.
+  
+  This should not be called from outside this library, mostly because there is no reason to and it
+  requires correct internal state to keep things in order.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    version_number: int, this is the version number in the version_changelist.id
+    change_record: dict, `version_commit` table row data
+    commit: boolean (default True), if True any queries that could be commited will be (single query transaction), if False then a later Commit() will be required
+  
+  Returns: None
+  """
+  # Parse the YAML for our cahnge data
+  change = utility.path.LoadYamlFromString(change_record['data_yaml'])
+  
+  # Set all of these records into their appropriate tables
+  # Process all the schema table fields we need version logs for
+  for (schema_id, schema_tables) in change.items():
+    
+    Log('Commit Change To Datasource: %s : %s' % (schema_id, schema_tables))
+    
+    for (schema_table_id, records) in schema_tables.items():
+      for (record_id, record) in records.items():
+        (schema, schema_table) = GetInfoSchemaAndTableById(request, schema_table_id)
+        
+        # Directly save this into table it was intended to be in
+        SetDirect(request, schema_table['name'], record, commit=commit)
 
 
 def CreateVersionLogRecords(request, version_table, version_id, data, commit=True):
