@@ -16,5 +16,8 @@ setup(name='schemaman',
         'Programming Language :: Python :: 2.7',
         'Topic :: Database :: Front-Ends',
       ],
+      entry_points = {
+        'console_scripts': ['schemaman=schemaman.schemaman:Main'],
+      },
       zip_safe=False)
 
