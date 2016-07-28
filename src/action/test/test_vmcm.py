@@ -5,7 +5,6 @@ Import a schema into a set of database tables:  database, table, field
 """
 
 
-
 # SchemaMan libraries
 import utility
 from utility.log import Log
@@ -45,12 +44,16 @@ def Action(connection_data, action_input_args):
   # Get data again (with VM changes applied)
   record_again = datasource.Get(request, table, record_id)
   
+  ReadLine('1: Pause for initial set version, type enter to continue: ')
+  
   # Get HEAD data (without VM changed applied)
   record_head = datasource.Get(request, table, record_id, use_working_version=False)
   
   # Abandon working versions of data
   Log('Abandon Working version\n\n')
   was_abandoned = datasource.AbandonWorkingVersion(request, table, record_id)
+  
+  ReadLine('2: Pause for initial set version is abandonded, type enter to continue: ')
   
   # Get data again (with VM changed applied, but no change)
   record_again_again = datasource.Get(request, table, record_id)
@@ -61,6 +64,8 @@ def Action(connection_data, action_input_args):
   # Save the change un-commited (as a version)
   Log('Set second changed record in version_working\n\n')
   datasource.SetVersion(request, table, record)
+  
+  ReadLine('3: Pause for second set version, type enter to continue: ')
   
   # Get again, see change
   record_again_again_again = datasource.Get(request, table, record_id)
