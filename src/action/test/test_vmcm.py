@@ -58,8 +58,8 @@ def Action(connection_data, action_input_args):
   # Get data again (with VM changed applied, but no change)
   record_again_again = datasource.Get(request, table, record_id)
   
-  # Make a change again
-  record['name'] = '%s!' % record['name']
+  # We already made this change once, but if you forgot, this was it:
+  # record['name'] = '%s!' % record['name']
   
   # Save the change un-commited (as a version)
   Log('Set second changed record in version_working\n\n')
