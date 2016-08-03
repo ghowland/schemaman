@@ -414,14 +414,14 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
   return result
 
 
-def Filter(request, table, data, version_number=None):
+def Filter(request, table, data=None, version_number=None):
   """Get 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables'.
   """
   handler = DetermineHandlerModule(request)
 
-  result = handler.Filter(request, table, data)
+  result = handler.Filter(request, table, data=data, version_number=version_number)
   
   return result
 

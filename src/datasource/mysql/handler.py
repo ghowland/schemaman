@@ -881,7 +881,7 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
   return record
 
 
-def Filter(request, table, data):
+def Filter(request, table, data=None, version_number=None):
   """Get 0 or more records from the datasource, based on filtering rules.  Works against a single table.
   """  
   base_sql = "SELECT * FROM `%s` WHERE %s"
@@ -915,8 +915,13 @@ def Filter(request, table, data):
   # Build out strings to insert into our base_sql
   where_sql = ' AND '.join(where_list)
   
-  # Create our final SQL
-  sql = base_sql % (table, where_sql)
+  # Create our final SQL, if we had WHERE list items
+  if where_list:
+    sql = base_sql % (table, where_sql)
+  
+  # Else, get all the records
+  else:
+    sql = "SELECT * FROM `%s`" % table
   
   # Log('\n\nGetFromData: %s: %s\nSQL:%s\nValues:%s\n' % (table, data, sql, values))
   
