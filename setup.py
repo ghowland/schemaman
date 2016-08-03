@@ -1,13 +1,13 @@
 from setuptools import setup, find_packages
 
 setup(name='schemaman',
-      version='0.1.3',
+      version='0.1.5',
       description='SchemaMan is a schema manager and query wrapper for multiple database backends, with Version and Change Management.',
       url='http://github.com/ghowland/schemaman',
       author='Geoff Howland',
       author_email='geoff@gmail.com',
       license='MIT',
-      packages=find_packages(),
+      packages=['schemaman'],
       include_package_data=True,
       data_files=[('', ['LICENSE', 'README.md'])],
       classifiers=[
