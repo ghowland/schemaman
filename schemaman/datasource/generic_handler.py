@@ -4,15 +4,15 @@
 import os
 import threading
 
-from utility.error import *
-from utility.path import *
+from schemaman.utility.error import *
+from schemaman.utility.path import *
 
 # Schema Datasource functions
 from request import Request
 import tools
 
 # Data Source Type handlers
-import mysql
+import mysql_handler
 
 
 class RecordNotFound(Exception):
@@ -77,7 +77,7 @@ def DetermineHandlerModule(request):
   
   # Test the host we found for it's connection type
   if found_server['type'] == 'mysql_56':
-    handler = mysql
+    handler = mysql_handler
   
   else:
     raise Exception('Unknown Data Source Type: %s' % request.request['type'])

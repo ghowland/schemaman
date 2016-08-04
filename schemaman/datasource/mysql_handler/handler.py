@@ -2,10 +2,9 @@
 Handle all SchemaMan datasource specific functions: MySQL
 """
 
-
-import datasource
-import utility
-from utility.log import Log
+#import schemaman.datasource as datasource
+import schemaman.utility as utility
+from schemaman.utility.log import Log
 
 from query import *
 

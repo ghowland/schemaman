@@ -7,9 +7,9 @@ Configure all the version and change management
 
 
 # SchemaMan libraries
-import utility
-from utility.interactive_input import *
-import datasource
+import schemaman.utility as utility
+from schemaman.utility.interactive_input import *
+import schemaman.datasource as datasource
 
 
 # This action's command on the CLI and also in the connection_data.actions dict as a key for our data

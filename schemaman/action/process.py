@@ -7,17 +7,16 @@ import os
 import pprint
 
 # SchemaMan modules
-import utility
-from utility.log import Log
-from utility.error import *
-from utility.path import *
-import datasource
+import schemaman.utility
+from schemaman.utility.log import Log
+from schemaman.utility.error import *
+from schemaman.utility.path import *
+import schemaman.datasource as datasource
 
 # Import action modules
 import config
 import populate
 import test
-import action as action_module
 
 # Mode for directories we create.
 MODE_DIRECTORY = 0755
@@ -28,6 +27,9 @@ CONNECTION_SPEC_VERSION = 1
 
 def ProcessAction(action, action_args, command_options):
   """Process the specified action, by it's action arguments.  Using command options."""
+  
+  #NOTE(g): This cannot be imported at the top, because it isnt ready yet, and it's a parent.  Python modules are terrible at pathing issues.
+  import schemaman.action as action_module
   
   # If Action is info
   if action == 'info':

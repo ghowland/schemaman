@@ -9,7 +9,7 @@ import logging
 import mysql.connector
 from mysql.connector import errorcode
 
-from utility.log import Log
+from schemaman.utility.log import Log
 
 
 # Default connection pool size.  Override with connection_data

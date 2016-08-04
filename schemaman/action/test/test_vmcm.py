@@ -6,10 +6,10 @@ Import a schema into a set of database tables:  database, table, field
 
 
 # SchemaMan libraries
-import utility
-from utility.log import Log
-from utility.interactive_input import *
-import datasource
+import schemaman.utility as utility
+from schemaman.utility.log import Log
+from schemaman.utility.interactive_input import *
+import schemaman.datasource as datasource
 
 
 # This action's command on the CLI and also in the connection_data.actions dict as a key for our data
