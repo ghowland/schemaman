@@ -414,6 +414,25 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
   return result
 
 
+def Query(request, sql, params=None):
+  """Perform a query without versioning.
+  
+  Can be a 'view', combining several lower level 'tables'.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    sql: string, SQL query to perform
+    params: list of values, any value type will inserted into the query to be quoted properly
+    
+  Returns: dict, single record key/values
+  """
+  handler = DetermineHandlerModule(request)
+  
+  result = handler.Query(request, sql, params=params)
+  
+  return result
+
+
 def Filter(request, table, data=None, version_number=None):
   """Get 0 or more records from the datasource, based on filtering rules.
   

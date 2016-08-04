@@ -880,6 +880,29 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
   return record
 
 
+def Query(request, sql, params=None):
+  """Perform a query without versioning.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    sql: string, SQL query to perform
+    params: list of values, any value type will inserted into the query to be quoted properly
+    version_number: int (default None), if an int, this is the version number in the version_change or version_commit
+        tables.  version_change is scanned before version_commit, as these are more likely to be requested.
+    use_working_version: boolean (default True), if True and version_number==None this will also look at any
+        version_working data and return it instead the head table data, if it exists for this user.
+  
+  Returns: dict, single record key/values
+  """
+  # Get a connection
+  connection = GetConnection(request)
+  
+  # Query
+  result = connection.Query(sql, params)
+  
+  return result
+
+
 def Filter(request, table, data=None, version_number=None):
   """Get 0 or more records from the datasource, based on filtering rules.  Works against a single table.
   """
