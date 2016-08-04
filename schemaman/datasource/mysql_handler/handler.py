@@ -882,7 +882,10 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
 
 def Filter(request, table, data=None, version_number=None):
   """Get 0 or more records from the datasource, based on filtering rules.  Works against a single table.
-  """  
+  """
+  if not data:
+    data = {}
+  
   base_sql = "SELECT * FROM `%s` WHERE %s"
   
   keys = data.keys()
