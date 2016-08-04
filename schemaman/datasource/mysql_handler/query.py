@@ -92,7 +92,7 @@ class Connection:
     
     NOTE(g): This does not verify the connection, just ensures that we think we have a valid connection.
     """
-    if self.request_number and self.connection:
+    if self.request and self.connection:
       return False
     
     else:
