@@ -163,7 +163,10 @@ class Connection:
 
   def Query(self, sql, params=None, commit=True):
     """Query the database via our connection."""
-    Log('Query: %s' % sql)
+    if not params:
+      Log('Query: %s' % sql)
+    else:
+      Log('Query: %s -- %s' % (sql, params))
     
     result = Query(self.connection, self.cursor, sql, params=params, commit=commit)
     

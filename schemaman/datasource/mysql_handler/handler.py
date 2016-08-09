@@ -903,8 +903,10 @@ def Query(request, sql, params=None):
   return result
 
 
-def Filter(request, table, data=None, version_number=None):
+def Filter(request, table, data=None, order_list=None, groupby_list=None, version_number=None):
   """Get 0 or more records from the datasource, based on filtering rules.  Works against a single table.
+  
+  TODO(g): Implement order_list and groupdby_list functionality for ORDER BY and GROUP BY
   """
   if not data:
     data = {}
@@ -929,12 +931,27 @@ def Filter(request, table, data=None, version_number=None):
     ticked_key = '`%s`' % keys[count]
     keys_ticked.append(ticked_key)
     
-    # Update keys will reference the insert keys, so we dont have to specify the data twice (SQL does it)
-    #TODO(g): Should I remove the primary key from this?  Not sure it's necessary.  Remove comment when proven it works without removing it (simpler)...
-    where_list.append('%s = %%s' % ticked_key)
+    # If this is a normal value.  All non-normal tests should be wrapped in tuple (not other sequences) for the proper magic to occur.
+    if type(data[keys[count]]) != tuple:
+      # Update keys will reference the insert keys, so we dont have to specify the data twice (SQL does it)
+      #TODO(g): Should I remove the primary key from this?  Not sure it's necessary.  Remove comment when proven it works without removing it (simpler)...
+      where_list.append('%s = %%s' % ticked_key)
+      
+      # Values are passed in separate than the SQL string
+      values.append(data[keys[count]])
     
-    # Values are passed in separate than the SQL string
-    values.append(data[keys[count]])
+    # Else, we want to do something being 
+    else:
+      # If the field is 'IN' a list of values
+      if data[keys[count]][0].upper() == 'IN':
+        match_list = data[keys[count]][1]
+        where_in_str = '(%s)' % ', '.join(match_list)
+
+        # Set the full statement here, which means we have to handle quoting the strings ourselves, if VARCHAR-like type
+        where_list.append('%s IN %s' % (ticked_key, where_in_str))
+
+      else:
+        raise Exception('Filter: Unknown WHERE directive: %s' % data[keys[count]])
   
   
   # Build out strings to insert into our base_sql

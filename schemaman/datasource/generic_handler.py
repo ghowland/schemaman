@@ -433,14 +433,14 @@ def Query(request, sql, params=None):
   return result
 
 
-def Filter(request, table, data=None, version_number=None):
+def Filter(request, table, data=None, order_list=None, groupby_list=None, version_number=None):
   """Get 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables'.
   """
   handler = DetermineHandlerModule(request)
 
-  result = handler.Filter(request, table, data=data, version_number=version_number)
+  result = handler.Filter(request, table, data=data, order_list=order_list, groupby_list=groupby_list, version_number=version_number)
   
   return result
 
