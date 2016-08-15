@@ -867,6 +867,29 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
   # Get a connection
   connection = GetConnection(request)
   
+  # If we want to use the working version, lets get the data
+  if use_working_version and not version_number:
+    # Get the schema and table info
+    (schema, schema_table) = GetInfoSchemaAndTable(request, table)
+    
+    working_version = GetUserVersionWorkingRecord(request)
+    
+    working_data = utility.path.LoadYamlFromString(working_version['data_yaml'])
+    
+    if schema['id'] in working_data:
+      db_data = working_data[schema['id']]
+      if schema_table['id'] in db_data:
+        table_data = db_data[schema_table['id']]
+        
+        # If we have this record_id, in this table, in this database, then return the working record
+        if record_id in table_data:
+          return table_data[record_id]
+    
+  # Else, if they want to retrieve a specified version number
+  elif version_number:
+    raise Exception('TBD: Not yet implemented: Get by version number...')
+    
+  
   #TODO(g): Confirm this is the primary key name, not just "id" all the time.  Can look this up in our schema_data_paths from connection_data...
   #TODO(g): Allow multiple fields for primary key, and do the right thing with them
   sql = "SELECT * FROM `%s` WHERE id = %s" % (table, int(record_id))

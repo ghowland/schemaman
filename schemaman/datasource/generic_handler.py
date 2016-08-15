@@ -409,7 +409,7 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
   """
   handler = DetermineHandlerModule(request)
   
-  result = handler.Get(request, table, record_id)
+  result = handler.Get(request, table, record_id, version_number=version_number, use_working_version=use_working_version)
   
   return result
 
