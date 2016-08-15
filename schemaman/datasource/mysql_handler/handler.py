@@ -926,7 +926,7 @@ def Query(request, sql, params=None):
   return result
 
 
-def Filter(request, table, data=None, order_list=None, groupby_list=None, version_number=None):
+def Filter(request, table, data=None, order_list=None, groupby_list=None, version_number=None, use_working_version=False):
   """Get 0 or more records from the datasource, based on filtering rules.  Works against a single table.
   
   TODO(g): Implement order_list and groupdby_list functionality for ORDER BY and GROUP BY

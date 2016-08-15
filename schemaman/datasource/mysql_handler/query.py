@@ -6,8 +6,15 @@ Datasource: MySQL: Querying
 import threading
 import logging
 
-import mysql.connector
-from mysql.connector import errorcode
+try:
+  import mysql.connector
+  from mysql.connector import errorcode
+  MYSQL = 'ORACLE'
+  
+except ImportError, e:
+  import MySQLdb
+  import MySQLdb.cursors
+  MYSQL = 'GHETTO'
 
 from schemaman.utility.log import Log
 
@@ -157,8 +164,13 @@ class Connection:
       Log('ERROR: Failed to read from password file: %s' % server['password_path'], logging.ERROR)
       password = None
     
-    self.connection = mysql.connector.connect(user=server['user'], password=password, host=server['host'], port=server['port'], database=server['database'], use_unicode=True, charset=DEFAULT_CHARSET)
-    self.cursor = self.connection.cursor(dictionary=True)
+    if MYSQL == 'ORACLE':
+      self.connection = mysql.connector.connect(user=server['user'], password=password, host=server['host'], port=server['port'], database=server['database'], use_unicode=True, charset=DEFAULT_CHARSET)
+      self.cursor = self.connection.cursor(dictionary=True)
+    
+    else:
+      self.connection = MySQLdb.Connection(user=server['user'], passwd=password, host=server['host'], port=server['port'], db=server['database'])
+      self.cursor = self.connection.cursor(cursorclass=MySQLdb.cursors.DictCursor)
 
 
   def Query(self, sql, params=None, commit=True):
@@ -196,7 +208,11 @@ def MySQLReleaseConnections(request):
     for connection in CONNECTION_POOL_POOL[server_key]:
       # If this connection is for the same request, release it
       if connection.IsUsedByRequest(request):
-        connection.Release()
+        if MYSQL == 'ORACLE':
+          connection.Release()
+          
+        else:
+          connection.close()
 
 
 def GetConnection(request, server_id=None):
