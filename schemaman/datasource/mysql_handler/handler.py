@@ -872,18 +872,21 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
     # Get the schema and table info
     (schema, schema_table) = GetInfoSchemaAndTable(request, table)
 
-    working_version = GetUserVersionWorkingRecord(request)
+    try:
+      working_version = GetUserVersionWorkingRecord(request)
 
-    working_data = utility.path.LoadYamlFromString(working_version['data_yaml'])
+      working_data = utility.path.LoadYamlFromString(working_version['data_yaml'])
 
-    if schema['id'] in working_data:
-      db_data = working_data[schema['id']]
-      if schema_table['id'] in db_data:
-        table_data = db_data[schema_table['id']]
+      if schema['id'] in working_data:
+        db_data = working_data[schema['id']]
+        if schema_table['id'] in db_data:
+          table_data = db_data[schema_table['id']]
 
-        # If we have this record_id, in this table, in this database, then return the working record
-        if record_id in table_data:
-          return table_data[record_id]
+          # If we have this record_id, in this table, in this database, then return the working record
+          if record_id in table_data:
+            return table_data[record_id]
+    except handler_exceptions.VersionNotFound, e:
+      pass
 
   # Else, if they want to retrieve a specified version number
   elif version_number:
