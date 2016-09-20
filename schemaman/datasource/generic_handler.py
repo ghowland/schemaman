@@ -11,6 +11,8 @@ from schemaman.utility.path import *
 from request import Request
 import tools
 
+print tools
+
 # Data Source Type handlers
 import mysql_handler
 
@@ -445,19 +447,23 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
   return result
 
 
-def Delete(request, version_number=None):
+def Delete(request, table, record_id, version_number=None, use_working_version=True):
   """Delete a single record.
   
   NOTE(g): Processes single record deletes directly, sends fitlered deletes to DeleteFilter()
   """
   handler = DetermineHandlerModule(request)
   
-  result =  handler.Delete(request, data)
+  if version_number == None and use_working_version == None:
+    result =  handler.Delete(request, table, record_id)
+  else:
+    raise Exception('TBD: Havent implemented Delete() for versions yet')
+  
   
   return result
 
 
-def DeleteFilter(request, version_number=None):
+def DeleteFilter(request, table, data, version_number=None, use_working_version=True):
   """Delete 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables', which makes it a
@@ -469,7 +475,11 @@ def DeleteFilter(request, version_number=None):
   """
   handler = DetermineHandlerModule(request)
   
-  result = handler.DeleteFilter(request, data)
+  if version_number == None and use_working_version == None:
+    result = handler.DeleteFilter(request, table, data)
+    
+  else:
+    raise Exception('TBD: Havent implemented DeleteFilter() for versions yet')
   
   return result
 

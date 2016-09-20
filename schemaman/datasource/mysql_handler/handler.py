@@ -13,6 +13,10 @@ from query import *
 SQL_DEBUG = True
 
 
+class InvalidArguments(Exception):
+  """Something wasnt right with the args."""
+
+
 def ReleaseConnections(request):
   """Release any connections tied with this request_number"""
   #TODO(g): Flatten this call path
@@ -1044,6 +1048,10 @@ def DeleteFilter(request, table, data, noop=False, commit=True):
   """
   # Get a connection
   connection = GetConnection(request)
+  
+  # Ensure they arent trying to truncate
+  if not data:
+    raise InvalidArguments('DeleteFilter requires a dict with values to filter on.  Truncation of all data is not allowed from this function with an empty dictionary.')
   
   # INSERT values into a table, and if they already exist, perform an UPDATE on the fields
   base_sql = "DELETE FROM `%s` WHERE %%s" % table
