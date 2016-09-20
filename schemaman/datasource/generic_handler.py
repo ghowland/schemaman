@@ -11,6 +11,9 @@ from schemaman.utility.path import *
 from request import Request
 import tools
 
+# Data Source Type handlers
+import mysql_handler
+
 
 class RecordNotFound(Exception):
   """An expected record was not found."""
@@ -74,7 +77,6 @@ def DetermineHandlerModule(request):
   
   # Test the host we found for it's connection type
   if found_server['type'] == 'mysql_56':
-    import mysql_handler
     handler = mysql_handler
   
   else:

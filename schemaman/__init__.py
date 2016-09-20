@@ -1,3 +1,3 @@
 import utility
-from datasource import *
+import datasource
 import action
