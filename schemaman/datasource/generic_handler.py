@@ -13,9 +13,6 @@ import tools
 
 print tools
 
-# Data Source Type handlers
-import mysql_handler
-
 class RecordNotFound(Exception):
   """An expected record was not found."""
 
