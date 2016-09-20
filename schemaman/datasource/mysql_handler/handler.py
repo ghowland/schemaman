@@ -2,7 +2,7 @@
 Handle all SchemaMan datasource specific functions: MySQL
 """
 
-#import schemaman.datasource as datasource
+import schemaman.datasource as datasource
 import schemaman.utility as utility
 from schemaman.utility.log import Log
 
