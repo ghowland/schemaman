@@ -33,6 +33,10 @@ CONNECTION_POOL_POOL_LOCK = threading.Lock()
 DEFAULT_CHARSET = 'latin1'
 
 
+# For every request, they can only take 1 request at a time, so they dont collide, so we lock to ensure they are sequential
+REQUEST_QUERY_LOCK = {}
+
+
 #TODO(g): Make this a base class, that each Handler type sub-classes.  Useful in this case, as it's an interface, and some methods are more virtual than others.  It's good to have a base class for the interface, otherwise every handler implements its own base, and they seem more disconnected...
 class Connection:
   """This wraps MySQL connection and cursor objects, as well as tracks the progress of any requests, and if it is available for use by a new request."""
@@ -175,12 +179,28 @@ class Connection:
 
   def Query(self, sql, params=None, commit=True):
     """Query the database via our connection."""
-    if not params:
-      Log('Query: %s' % sql)
-    else:
-      Log('Query: %s -- %s' % (sql, params))
+    set_request_lock = False
+    if self.request:
+      # Ensure any requests we look at, have a lock we can grab
+      if self.request.request_number not in REQUEST_QUERY_LOCK:
+        REQUEST_QUERY_LOCK[self.request.request_number] = threading.Lock()
+      
+      # Get the lock
+      REQUEST_QUERY_LOCK[self.request.request_number].acquire()
+      set_request_lock = True
+        
     
-    result = Query(self.connection, self.cursor, sql, params=params, commit=commit)
+    try:
+      if not params:
+        Log('Query: %s' % sql)
+      else:
+        Log('Query: %s -- %s' % (sql, params))
+      
+      result = Query(self.connection, self.cursor, sql, params=params, commit=commit)
+    
+    finally:
+      if set_request_lock:
+        REQUEST_QUERY_LOCK[self.request.request_number].release()
     
     return result
   

@@ -390,6 +390,42 @@ def SetVersion(request, table, data, commit_version=False, version_number=None):
   return result
 
 
+def SetFromUdnDict(request, data, version_number=None, use_working_version=True):
+  """Set data from a dictionary with UDN keys (Universion Dotted Notation: 'table_name.row_id.field_name')
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    data: dict, record to set into table
+    use_working_version: boolean (default True), if True and version_number==None this will also look at any
+        version_working data and return it instead the head table data, if it exists for this user.
+  """
+  handler = DetermineHandlerModule(request)
+  
+  records = {}
+  
+  # Turn UDN into records
+  for (udn, value) in data.items():
+    (table, record_id, field) = udn.split('.')
+    
+    # Get the record from records, if it exists, otherwise create it
+    record_key = (table, record_id)
+    if record_key not in records:
+      records[record_key] = {'id': record_id}
+    
+    record = records[record_key]
+    
+    record[field] = value
+  
+  # Set our data items
+  for (record_key, record) in records.items():
+    if not use_working_version:
+      Set(request, table, record)
+      
+    else:
+      SetVersion(request, table, record, version_number=version_number)
+  
+
+
 def Get(request, table, record_id, version_number=None, use_working_version=True):
   """Get (select single record) from this datasource.
   
