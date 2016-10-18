@@ -927,16 +927,18 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
     # If we also found a version record, overlay it
     if found_version_record:
       record.update(found_version_record)
+      print 'Found Version Record, updating over Real Record:  Returning: %s (%s): %s' % (record_id, type(record_id), record)
     
   else:
     record = None
     
     # If we found a version record, use it.
     #TODO(g): In this case, every field should be present, or it will be a "corrupt" record.  How to test this?  Do I need to?  Maybe...  Optional not to allow this?  Not sure.  Thing about it...
-    record = found_version_record
-  
-  print 'Didnt find working record:  Returning: %s (%s): %s' % (record_id, type(record_id), record)
-  
+    if found_version_record:
+      record = found_version_record
+   
+      print 'Couldnt find Real Record, but Found Version Record:  Returning: %s (%s): %s' % (record_id, type(record_id), record)
+ 
   return record
 
 
@@ -1034,7 +1036,60 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
   # Query
   rows = connection.Query(sql, values)
   
+  
+  # If we want to use the working version
+  if use_working_version:
+    # Get the working version data for this user
+    working_version = GetWorkingVersionData(request)
+    
+    (schema, schema_table) = GetInfoSchemaAndTable(request, table)
+    
+    if schema['id'] in working_version:
+      working_schema = working_version[schema['id']]
+      
+      if schema_table['id'] in working_schema:
+        working_table = working_schema[schema_table['id']]
+        
+        # Loop over our row results
+        for row in rows:
+          # If the row we got from Filter() exists in our working_table, update those contents over the row
+          if row['id'] in working_table:
+            row.update(working_table[row['id']])
+
+
+  #TODO(g): Allow using version numbers too  
+  if version_number:
+    raise Exception('Trying to use a Version Number with a Filter() is Not Yet Implemented')
+
+  
   return rows
+
+
+def GetWorkingVersionData(request, username=None):
+  """Returns the version_working record's data_yaml, already parsed to Python data, Dict or None
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+  
+  Returns: dict or None
+  """
+  # If one wasnt passed in, we use the requester
+  if not username:
+    username = request.username
+  
+  # Get the user_id
+  user_list = Filter(request, 'user', {'name':username})
+  
+  if not user_list:
+    return None
+  
+  user = user_list[0]
+  
+  version_working = Get(request, 'version_working', user['id'])
+  
+  result = utility.path.LoadYamlFromString(version_working['data_yaml'])
+  
+  return result
 
 
 def Delete(request, table, record_id, noop=False, commit=True):

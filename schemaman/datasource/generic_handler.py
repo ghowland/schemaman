@@ -487,6 +487,14 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
   return result
 
 
+def GetWorkingVersionData(request, username=None):
+  handler = DetermineHandlerModule(request)
+
+  result = handler.GetWorkingVersionData(request, username=username)
+  
+  return result
+
+
 def Delete(request, table, record_id, version_number=None, use_working_version=True):
   """Delete a single record.
   
