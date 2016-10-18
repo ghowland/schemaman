@@ -406,6 +406,7 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
   # Turn UDN into records
   for (udn, value) in data.items():
     (table, record_id, field) = udn.split('.')
+    record_id = int(record_id)
     
     # Get the record from records, if it exists, otherwise create it
     record_key = (table, record_id)
@@ -416,8 +417,14 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
     
     record[field] = value
   
+  import pprint
+  print '\n\nSet UDN Records:\n%s\n\n' % pprint.pformat(records)
+  
   # Set our data items
   for (record_key, record) in records.items():
+    # Get the table from the record key.  We dont need the record_id, that is just for uniqueness in the key.  Set*() takes the key from the 'id' field
+    (table, _) = record_key
+    
     if not use_working_version:
       Set(request, table, record)
       

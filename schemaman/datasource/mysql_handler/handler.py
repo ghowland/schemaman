@@ -713,6 +713,8 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   # Get the schema and table info
   (schema, schema_table) = GetInfoSchemaAndTable(request, table)
 
+  print '\n\n** SetVersion: %s: %s\n\n' % (table, data)
+
   
   # If this is a working version (no version number)
   if not version_number:
@@ -744,6 +746,8 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   if result:
     record = result[0]
     change = utility.path.LoadYamlFromString(record['data_yaml'])
+    if not change:
+      change = {}
   
   # Else, we dont have one yet, so create one (this can only execute on working, because we fail if we have not result with pending)
   else:
@@ -769,8 +773,15 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   # Readability variable
   change_table = change[schema['id']][schema_table['id']]
   
-  # Add this specific record
-  change_table[data_key] = data
+  print '\n\nSetting data in table: %s: %s: %s\nChange Table: %s\nData: %s\n\n' % (schema['id'], schema_table['id'], data_key, change_table, data)
+  
+  # Add this specific record, or update it if it already exists
+  if data_key in change_table:
+    change_table[data_key].update(data)
+  else:
+    change_table[data_key] = data
+  
+  print '\nAfter Setting Data: %s\n\n' % change_table
   
   # Put this change record back into the version_change table, so it's saved
   record['data_yaml'] = utility.path.DumpYamlAsString(change)
@@ -871,6 +882,8 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
   # Get a connection
   connection = GetConnection(request)
   
+  found_version_record = None
+  
   # If we want to use the working version, lets get the data
   if use_working_version and not version_number:
     # Get the schema and table info
@@ -880,16 +893,24 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
 
       working_data = utility.path.LoadYamlFromString(working_version['data_yaml'])
 
-      if schema['id'] in working_data:
+      # If we have the working data (!None), and this scheme ID is in it, then look deeper
+      if working_data and schema['id'] in working_data:
         db_data = working_data[schema['id']]
         if schema_table['id'] in db_data:
           table_data = db_data[schema_table['id']]
 
           # If we have this record_id, in this table, in this database, then return the working record
           if record_id in table_data:
-            return table_data[record_id]
+            
+            print '\n\nFound Working Record: %s\n\n' % table_data[record_id]
+            
+            # Update this data over the existing table data
+            #return table_data[record_id] #TODO(g):REMOVE: Old, used to return this, but I dont want to set every field, so its an overlay now
+            found_version_record = table_data[record_id]
+    
     except datasource.VersionNotFound, e:
       pass
+  
   # Else, if they want to retrieve a specified version number
   elif version_number:
     raise Exception('TBD: Not yet implemented: Get by version number...')
@@ -902,8 +923,19 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
   
   if result:
     record = result[0]
+    
+    # If we also found a version record, overlay it
+    if found_version_record:
+      record.update(found_version_record)
+    
   else:
     record = None
+    
+    # If we found a version record, use it.
+    #TODO(g): In this case, every field should be present, or it will be a "corrupt" record.  How to test this?  Do I need to?  Maybe...  Optional not to allow this?  Not sure.  Thing about it...
+    record = found_version_record
+  
+  print 'Didnt find working record:  Returning: %s (%s): %s' % (record_id, type(record_id), record)
   
   return record
 
