@@ -1054,6 +1054,8 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
   if use_working_version:
     # Get the working version data for this user
     working_version = GetWorkingVersionData(request)
+    if not working_version:
+      working_version = {}
     
     (schema, schema_table) = GetInfoSchemaAndTable(request, table)
     
