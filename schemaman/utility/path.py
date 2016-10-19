@@ -52,7 +52,13 @@ def SaveYaml(path, data):
 
 
 def LoadYamlFromString(text):
-  """Loads YAML data from a string"""
+  """Loads YAML data from a string
+  
+  Returns: any data container type storable in YAML, or None
+  """
+  if text == None:
+    return None
+  
   result = yaml.load(StringIO.StringIO(text))
   
   return result

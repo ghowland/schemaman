@@ -7,6 +7,8 @@ import time
 
 from schemaman.utility.error import *
 from schemaman.utility.path import *
+import schemaman.utility as utility
+from schemaman.utility.log import Log
 
 # Schema Datasource functions
 from request import Request
@@ -412,23 +414,42 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
   handler = DetermineHandlerModule(request)
   
   records = {}
+  delete_records = []
   
   # Turn UDN into records
   for (udn, value) in data.items():
+    # Check if we are deleting a record
+    is_delete = False
+    if udn.startswith('__delete.'):
+      is_delete = True
+      
+      # Strip off the delete, as we know about it now
+      (_, udn) = udn.split('.', 1)
+      
+    
     (table, record_id, field) = udn.split('.')
     record_id = int(record_id)
     
-    # Get the record from records, if it exists, otherwise create it
-    record_key = (table, record_id)
-    if record_key not in records:
-      records[record_key] = {'id': record_id}
+    # Get the record from positive records or negative (delete)
+    if not is_delete:
+      # Get the record from records, if it exists, otherwise create it
+      record_key = (table, record_id)
+      
+      if record_key not in records:
+        records[record_key] = {'id': record_id}
+      record = records[record_key]
+      
+      record[field] = value
     
-    record = records[record_key]
-    
-    record[field] = value
+    # Else, we are deleting, so use those delete records (as a list of tuples, since we only need to track table/record_id)
+    else:
+      if (table, record_id) not in delete_records:
+        delete_records.append((table, record_id))
+
   
   import pprint
-  print '\n\nSet UDN Records:\n%s\n\n' % pprint.pformat(records)
+  print '\n\nSet UDN Records:\n%s\n' % pprint.pformat(records)
+  print '\nSet UDN Delete Records:\n%s\n\n' % pprint.pformat(delete_records)
   
   # Set our data items
   for (record_key, record) in records.items():
@@ -441,6 +462,14 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
     else:
       SetVersion(request, table, record, version_number=version_number)
   
+  
+  # Delete our specified data items
+  for (table, record_id) in delete_records:
+    if not use_working_version:
+      Delete(request, table, record_id)
+      
+    else:
+      DeleteVersion(request, table, record_id, version_number=version_number)
 
 
 def Get(request, table, record_id, version_number=None, use_working_version=True):
@@ -534,27 +563,30 @@ def AcquireLock(request, lock, timeout=None, sleep_interval=0.1):
   
   Returns: boolean, did we get the lock?  True = yes. False = no.  This only matters if timeout is set, otherwise we will wait forever
   """
+  Log('Acquire Lock: %s' % lock)
+  
   done = False
   started = time.time()
   
   while not done:
     duration = time.time() - started
     
-    try:
+    # try:
+    if 1:
       Set(request, 'schema_lock', {'name':lock})
       
       # It worked, we are done
       done = True
     
-    #TODO(g): Get the correct exception type here, so we only catch insertion failures
-    except Exception, e:
-      print 'AcquireLock: Failed: %s: %s: %s' % (lock, duraction, e)
-      
-      if timeout and duration > timeout:
-        return False
-      
-      # Sleep for the specified time
-      time.sleep(sleep_interval)
+    # #TODO(g): Get the correct exception type here, so we only catch insertion failures
+    # except Exception, e:
+    #   print 'AcquireLock: Failed: %s: %s: %s' % (lock, duration, e)
+    #   
+    #   if timeout and duration > timeout:
+    #     return False
+    #   
+    #   # Sleep for the specified time
+    #   time.sleep(sleep_interval)
   
   return True
 
@@ -568,6 +600,8 @@ def ReleaseLock(request, lock):
     
   Returns: boolean, did we release the lock?  True = yes. False = no.  If false, the lock was not set (which can indicate a problem)
   """
+  Log('Release Lock: %s' % lock)
+  
   lock_list = Filter(request, 'schema_lock', {'name': lock})
   
   if not lock_list:
@@ -575,9 +609,25 @@ def ReleaseLock(request, lock):
   
   lock_record = lock_list[0]
   
-  Delete(request, 'schema_lock', lock_record)
+  Delete(request, 'schema_lock', lock_record['id'])
   
   return True
+
+
+def GetSchemaTableRowLockKey(request, table, record_id, schema=None):
+  """
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+  
+  Returns: str, lock key for specified table and record_id
+  """
+  # Ensure we have these.  We allow them to be passed in as a performance optimization
+  if not schema:
+    (schema, schema_table) = GetInfoSchema(request)
+  
+  lock = '%s.%s.%s' % (schema['id'], table, record_id)
+  
+  return lock
 
 
 def GetNextNegativeNumber(request, table):
@@ -592,42 +642,129 @@ def GetNextNegativeNumber(request, table):
   # Perform an internal lock, so we cant race on this
   #TODO
   
-  table_row = Get(request, 'schema_table', schema_table['id'])
+  # Get the lock key for this schema table row
+  lock = GetSchemaTableRowLockKey(request, table, schema_table['id'], schema=schema)
+
+  try:
+    # Get the lock, so we dont collide on this
+    AcquireLock(request, lock)
+    
+    # Get the next negative from the current storage
+    next_negative_id = table_row['next_negative_id']
+    
+    # Decrement the next negative ID, so we always get original ones, and they wont conflict
+    table_row['next_negative_id'] -= 1
+    
+    # Save with the new decremented number
+    Set(request, 'schema_table', table_row)
   
-  lock = 'schema_table.%s' % table_row['id']
-  
-  # Get the lock, so we dont collide on this
-  AcquireLock(request, lock)
-  
-  # Get the next negative from the current storage
-  next_negative_id = table_row['next_negative_id']
-  
-  # Decrement the next negative ID, so we always get original ones, and they wont conflict
-  table_row['next_negative_id'] -= 1
-  
-  # Save with the new decremented number
-  Set(request, 'schema_table', table_row)
-  
-  # Release the lock
-  ReleaseLock(request, lock)
+  finally:
+    # Release the lock
+    ReleaseLock(request, lock)
   
   return next_negative_id
 
 
-def Delete(request, table, record_id, version_number=None, use_working_version=True):
+def Delete(request, table, record_id):
   """Delete a single record.
   
-  NOTE(g): Processes single record deletes directly, sends fitlered deletes to DeleteFilter()
+  Use DeleteVersion() if you want version management over this delete.  This deleted the Real record.
+  
+  Use DeleteFilter() if you want to potentially delete many rows at once.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    record_id: int, primary key (ex: `id`) of the record in this table.  Use Filter() to use other field values
   """
   handler = DetermineHandlerModule(request)
   
-  if version_number == None and use_working_version == None:
-    result =  handler.Delete(request, table, record_id)
-  else:
-    raise Exception('TBD: Havent implemented Delete() for versions yet')
-  
-  
+  result =  handler.Delete(request, table, record_id)
+    
   return result
+
+
+def DeleteVersion(request, table, record_id, version_number=None):
+  """Delete a single record from Working Version or a Pending Commit.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    record_id: int, primary key (ex: `id`) of the record in this table.  Use Filter() to use other field values
+    version_number: int, this is the version number in the version_changelist.id
+  
+  Returns: None
+  """
+  if version_number != None:
+    raise Exception('TBD: Version Number specific Deletes has not yet been implemented.')
+  
+  Log('Delete Version: %s: %s' % (table, record_id))
+  
+  (schema, schema_table) = GetInfoSchemaAndTable(request, table)
+  
+  user = GetUser(request)
+  
+  # Get the lock key for this schema table row
+  lock = GetSchemaTableRowLockKey(request, table, record_id, schema=schema)
+  
+  try:
+    # Acquire a lock, so we can work safely
+    AcquireLock(request, lock)
+    
+    # Get the current working version
+    version_working = Get(request, 'version_working', user['id'])
+    
+    # If we dont have a working version, make new dicts to store data in
+    update_data = {}
+    delete_data = {}
+    
+    # If, we have a working version, so get the data
+    if version_working:
+      update_data = utility.path.LoadYamlFromString(version_working['data_yaml'])
+      delete_data = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
+      
+      if not update_data:
+        update_data = {}
+      
+      if not delete_data:
+        delete_data = {}
+
+    
+    # Check to see if this a Real record
+    real_record = Get(request, table, record_id)
+    
+    # If we have a Real record, make an entry in the Delete Data, because we really want to delete this
+    if real_record:
+      
+      # If we dont have the schema in our delete_data, add it
+      if schema['id'] not in delete_data:
+        delete_data[schema['id']] = {}
+        
+      # If we dont have the schema_table in our delete_data, add it
+      if schema_table['id'] not in delete_data[schema['id']]:
+        delete_data[schema['id']][schema_table['id']] = []
+      
+      # If we dont have this record in the proper place already (other records of that table to-delete), append it
+      if record_id not in delete_data[schema['id']][schema_table['id']]:
+        delete_data[schema['id']][schema_table['id']].append(record_id)
+    
+    # If we have an entry of this record in update_data, then remove that, because Delete always means to clear version data
+    if schema['id'] in update_data:
+      if schema_table['id'] in update_data[schema['id']]:
+        if record_id in update_data[schema['id']][schema_table['id']]:
+          # Delete the record from this update_data table, we are nulling that potential change
+          del update_data[schema['id']][schema_table['id']][record_id]
+    
+    # Add this to the working version record
+    version_working['data_yaml'] = utility.path.DumpYamlAsString(update_data)
+    version_working['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_data)
+    
+    # Save the working version record
+    Set(request, 'version_working', version_working)
+  
+  finally:
+    # Ensure we release the lock
+    ReleaseLock(request, lock)
 
 
 def DeleteFilter(request, table, data, version_number=None, use_working_version=True):
