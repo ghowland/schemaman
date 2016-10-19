@@ -1063,11 +1063,42 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
       if schema_table['id'] in working_schema:
         working_table = working_schema[schema_table['id']]
         
+        # Get a list of all the row IDs, so we can see if we need to add any
+        row_id_list = []
+        
         # Loop over our row results
         for row in rows:
+          # Add the row ID, so we know them all
+          row_id_list.append(row['id'])
+          
           # If the row we got from Filter() exists in our working_table, update those contents over the row
           if row['id'] in working_table:
             row.update(working_table[row['id']])
+        
+        # Ensure rows is a list (mutable)
+        if type(rows) == tuple:
+          rows = list(rows)
+        
+        # Loop over the working_table, and see if we have any entries we dont have in the rows, but that meet the requirement
+        for (item_key, item) in working_table.items():
+          if item['id'] not in row_id_list:
+            # Check if any of the filter key-values dont match, we only want to add it if they all match
+            filter_data_matched = True
+            for (filter_key, filter_value) in data.items():
+              if filter_key not in item or item[filter_key] != filter_value:
+                filter_data_matched = False
+                break
+            
+            # If all the conditions are met
+            if filter_data_matched:
+              # Add this record to the rows.
+              rows.append(item)
+              
+              #TODO(g): Sort these.  Order By, Group By, etc.
+              pass
+        
+        #TODO(g): Order by, group by, etc.  We can control ALL the data so it's perfectly integrated, and looks like its part of the query
+        pass
 
 
   #TODO(g): Allow using version numbers too  
