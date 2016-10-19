@@ -3,6 +3,7 @@
 
 import os
 import threading
+import time
 
 from schemaman.utility.error import *
 from schemaman.utility.path import *
@@ -340,6 +341,15 @@ def Commit(request):
   return result
 
 
+def AbandonCommit(request):
+  """Abandon Commit a datasource transaction that is in the middle of a transaction."""
+  handler = DetermineHandlerModule(request)
+  
+  result = handler.AbandonCommit(request)
+  
+  return result
+
+
 def Set(request, table, data, version_management=False, commit_version=False, version_number=None, commit=True):
   """Put (insert/update) data into this datasource.
   
@@ -479,6 +489,17 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
   """Get 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables'.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    data: dict, key is fields, value is the equality value.  Strict matching here.
+    order_list: list of strings, fields to order by
+    groupby_list: list of strings, fields to group by
+    version_number: int (default None), if an int, this is the version number in the version_change or version_commit
+        tables.  version_change is scanned before version_commit, as these are more likely to be requested.
+    use_working_version: boolean (default True), if True and version_number==None this will also look at any
+        version_working data and return it instead the head table data, if it exists for this user.
   """
   handler = DetermineHandlerModule(request)
 
@@ -488,11 +509,109 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
 
 
 def GetWorkingVersionData(request, username=None):
+  """Returns a dict or None, with the current working data (already parsed from `version_working.data_yaml`
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+  
+  Returns: dict or None
+  """
   handler = DetermineHandlerModule(request)
 
   result = handler.GetWorkingVersionData(request, username=username)
   
   return result
+
+
+def AcquireLock(request, lock, timeout=None, sleep_interval=0.1):
+  """Spin loops until we can get this lock.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    lock: string, lock name.  Will be unique
+    timeout: float (optional), time in seconds before timeout
+    sleep_interval: float, time to sleep between checking on the lock
+  
+  Returns: boolean, did we get the lock?  True = yes. False = no.  This only matters if timeout is set, otherwise we will wait forever
+  """
+  done = False
+  started = time.time()
+  
+  while not done:
+    duration = time.time() - started
+    
+    try:
+      Set(request, 'schema_lock', {'name':lock})
+      
+      # It worked, we are done
+      done = True
+    
+    #TODO(g): Get the correct exception type here, so we only catch insertion failures
+    except Exception, e:
+      print 'AcquireLock: Failed: %s: %s: %s' % (lock, duraction, e)
+      
+      if timeout and duration > timeout:
+        return False
+      
+      # Sleep for the specified time
+      time.sleep(sleep_interval)
+  
+  return True
+
+
+def ReleaseLock(request, lock):
+  """Releases a lock.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    lock: string, lock name.  Will be unique
+    
+  Returns: boolean, did we release the lock?  True = yes. False = no.  If false, the lock was not set (which can indicate a problem)
+  """
+  lock_list = Filter(request, 'schema_lock', {'name': lock})
+  
+  if not lock_list:
+    return False
+  
+  lock_record = lock_list[0]
+  
+  Delete(request, 'schema_lock', lock_record)
+  
+  return True
+
+
+def GetNextNegativeNumber(request, table):
+  """Returns the next negative number for a given table, from `schema_table.next_negative_id`
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+  """
+  (schema, schema_table) = GetInfoSchemaAndTable(request, table)
+  
+  # Perform an internal lock, so we cant race on this
+  #TODO
+  
+  table_row = Get(request, 'schema_table', schema_table['id'])
+  
+  lock = 'schema_table.%s' % table_row['id']
+  
+  # Get the lock, so we dont collide on this
+  AcquireLock(request, lock)
+  
+  # Get the next negative from the current storage
+  next_negative_id = table_row['next_negative_id']
+  
+  # Decrement the next negative ID, so we always get original ones, and they wont conflict
+  table_row['next_negative_id'] -= 1
+  
+  # Save with the new decremented number
+  Set(request, 'schema_table', table_row)
+  
+  # Release the lock
+  ReleaseLock(request, lock)
+  
+  return next_negative_id
 
 
 def Delete(request, table, record_id, version_number=None, use_working_version=True):

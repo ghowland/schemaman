@@ -210,6 +210,13 @@ class Connection:
     result = self.connection.commit()
     
     return result
+  
+  
+  def AbandonCommit(self):
+    """Abandon Commit a transaction in flight."""
+    result = self.connection.rollback()
+    
+    return result
 
 
 def MySQLReleaseConnections(request):

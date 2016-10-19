@@ -664,6 +664,19 @@ def Commit(request):
   connection.Commit()
 
 
+def AbandonCommit(request):
+  """Abandon Commit a datasource transaction that is in the middle of a transaction.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+  
+  Returns: None
+  """
+  connection = GetConnection(request)
+  
+  connection.AbandonCommit()
+
+
 def Set(request, table, data, version_management=True, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
   """Put (insert/update) data into this datasource.
   
