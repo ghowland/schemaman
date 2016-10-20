@@ -768,6 +768,11 @@ def DeleteVersion(request, table, record_id, version_number=None):
           # Delete the record from this update_data table, we are nulling that potential change
           del update_data[schema['id']][schema_table['id']][record_id]
     
+    
+    # Clean up the data, so we dont leave empty cruft around
+    CleanEmptyVersionData(update_data)
+    CleanEmptyVersionData(delete_data)
+    
     # Add this to the working version record
     version_working['data_yaml'] = utility.path.DumpYamlAsString(update_data)
     version_working['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_data)
@@ -800,3 +805,33 @@ def DeleteFilter(request, table, data, version_number=None, use_working_version=
   
   return result
 
+
+def CleanEmptyVersionData(version_data):
+  """Cleans up any empty dicts or lists in the version_work data_yaml field data."""
+  schema_keys = version_data.keys()
+  
+  # Loop over our schemas
+  for schema_key in schema_keys:
+    schema_data = version_data[schema_key]
+    table_keys = schema_data.keys()
+    
+    for table_key in table_keys:
+      table_data = schema_data[table_key]
+      
+      # If this is a dict type, we need to go one more level deep.  If not, we dont
+      if type(table_data) == dict:
+        record_keys = table_data.keys()
+        
+        # Loop over our records
+        for record_key in record_keys:
+          # If the record is empty, delete it
+          if not table_data[record_key]:
+            del table_data[record_key]
+      
+      # If the table is empty, delete it
+      if not schema_data[table_key]:
+        del schema_data[table_key]
+    
+    # If this schema is empty, delete it
+    if not version_data[schema_key]:
+      del version_data[schema_key]

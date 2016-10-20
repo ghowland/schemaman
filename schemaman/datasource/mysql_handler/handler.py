@@ -824,8 +824,8 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
 
 
   # Clean up any unused data structures, so we dont have a bunch of junk hanging around
-  __CleanEmptyVersionData(change)
-  __CleanEmptyVersionData(delete_change)
+  datasource.CleanEmptyVersionData(change)
+  datasource.CleanEmptyVersionData(delete_change)
 
   
   # Put this change record back into the version_change table, so it's saved
@@ -836,37 +836,6 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   result_record = SetDirect(request, version_table, record)
   
   return result_record
-
-
-def __CleanEmptyVersionData(version_data):
-  """Cleans up any empty dicts or lists in the version_work data_yaml field data."""
-  schema_keys = version_data.keys()
-  
-  # Loop over our schemas
-  for schema_key in schema_keys:
-    schema_data = version_data[schema_key]
-    table_keys = schema_data.keys()
-    
-    for table_key in table_keys:
-      table_data = schema_data[table_key]
-      
-      # If this is a dict type, we need to go one more level deep.  If not, we dont
-      if type(table_data) == dict:
-        record_keys = table_data.keys()
-        
-        # Loop over our records
-        for record_key in record_keys:
-          # If the record is empty, delete it
-          if not table_data[record_key]:
-            del table_data[record_key]
-      
-      # If the table is empty, delete it
-      if not schema_data[table_key]:
-        del schema_data[table_key]
-    
-    # If this schema is empty, delete it
-    if not version_data[schema_key]:
-      del version_data[schema_key]
 
 
 def SetDirect(request, table, data, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
