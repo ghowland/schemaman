@@ -759,8 +759,11 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   if result:
     record = result[0]
     change = utility.path.LoadYamlFromString(record['data_yaml'])
+    delete_change = utility.path.LoadYamlFromString(record['delete_data_yaml'])
     if not change:
       change = {}
+    if not delete_change:
+      delete_change = {}
   
   # Else, we dont have one yet, so create one (this can only execute on working, because we fail if we have not result with pending)
   else:
@@ -796,8 +799,18 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   
   print '\nAfter Setting Data: %s\n\n' % change_table
   
+  # If we had an entry in the delete_change list for this record, remove that.  Any position change wipes out a delete, for obvious reasons.
+  if schema['id'] in delete_change:
+   if schema_table['id'] in delete_change[schema['id']]:
+      # If we have this record's ID in our delete list, remove it
+      if data['id'] in delete_change[schema['id']][schema_table['id']]:
+        del delete_change[schema['id']][schema_table['id']][data['id']]
+ 
+
+  
   # Put this change record back into the version_change table, so it's saved
   record['data_yaml'] = utility.path.DumpYamlAsString(change)
+  record['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_change)
     
   # Save the change record
   result_record = SetDirect(request, version_table, record)
@@ -1051,14 +1064,18 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
   
   
   # If we want to use the working version
+  #TODO(g): Move this section to generic_handler.py, because it can be generalized to all DB Handlers.
   if use_working_version:
     # Get the working version data for this user
-    working_version = GetWorkingVersionData(request)
-    if not working_version:
-      working_version = {}
+    (working_version, delete_version) = GetWorkingVersionData(request)
     
     (schema, schema_table) = GetInfoSchemaAndTable(request, table)
     
+    # Ensure rows is a list (mutable)
+    if type(rows) == tuple:
+      rows = list(rows)
+    
+    # Look to see if we have an Updates from our Working Version data, to make changes to the rows
     if schema['id'] in working_version:
       working_schema = working_version[schema['id']]
       
@@ -1076,10 +1093,6 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
           # If the row we got from Filter() exists in our working_table, update those contents over the row
           if row['id'] in working_table:
             row.update(working_table[row['id']])
-        
-        # Ensure rows is a list (mutable)
-        if type(rows) == tuple:
-          rows = list(rows)
         
         # Loop over the working_table, and see if we have any entries we dont have in the rows, but that meet the requirement
         for (item_key, item) in working_table.items():
@@ -1101,6 +1114,31 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
         
         #TODO(g): Order by, group by, etc.  We can control ALL the data so it's perfectly integrated, and looks like its part of the query
         pass
+    
+    
+    print '\n\n+++ Delete version: %s' % delete_version
+    
+    # If we have any entries that we might need to delete, in our working version (delete versions)
+    if schema['id'] in delete_version:
+      delete_schema = delete_version[schema['id']]
+      
+      if schema_table['id'] in delete_schema:
+        delete_table = delete_schema[schema_table['id']]
+        
+        print '\n\n-*- Found entry in Delete Version table while in Filter: %s' % delete_table
+        
+        delete_rows = []
+        
+        # Add any rows matching our delete entry to the delete list
+        for row in rows:
+          if row['id'] in delete_table:
+            print 'Matched delete row: %s' % row
+            delete_rows.append(row)
+        
+        # Remove any rows marked for deletion
+        for row in delete_rows:
+          print 'Removing row: %s' % row
+          rows.remove(row)
 
 
   #TODO(g): Allow using version numbers too  
@@ -1112,12 +1150,12 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
 
 
 def GetWorkingVersionData(request, username=None):
-  """Returns the version_working record's data_yaml, already parsed to Python data, Dict or None
+  """Returns the version_working record's data_yaml, already parsed to Python data dict
   
   Args:
     request: Request Object, the connection spec data and user and auth info, etc
   
-  Returns: dict or None
+  Returns: tuple of (dict, dict), which is (update_version, delete_version), respectively
   """
   # If one wasnt passed in, we use the requester
   if not username:
@@ -1133,9 +1171,16 @@ def GetWorkingVersionData(request, username=None):
   
   version_working = Get(request, 'version_working', user['id'])
   
-  result = utility.path.LoadYamlFromString(version_working['data_yaml'])
+  update_version = utility.path.LoadYamlFromString(version_working['data_yaml'])
+  delete_version = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
   
-  return result
+  # Ensure they are properly initialized
+  if update_version == None:
+    update_version = {}
+  if delete_version == None:
+    delete_version = []
+  
+  return (update_version, delete_version)
 
 
 def Delete(request, table, record_id, noop=False, commit=True):
