@@ -430,11 +430,12 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
     (table, record_id, field) = udn.split('.')
     record_id = int(record_id)
     
+    # Get the record from records, if it exists, otherwise create it
+    record_key = (table, record_id)
+    
     # Get the record from positive records or negative (delete)
     if not is_delete:
-      # Get the record from records, if it exists, otherwise create it
-      record_key = (table, record_id)
-      
+      # If we dont have an entry for this record yet
       if record_key not in records:
         records[record_key] = {'id': record_id}
       record = records[record_key]
@@ -443,9 +444,21 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
     
     # Else, we are deleting, so use those delete records (as a list of tuples, since we only need to track table/record_id)
     else:
-      if (table, record_id) not in delete_records:
-        delete_records.append((table, record_id))
+      # We want to store negative records in here too, just to get rid of any positive-update fields that may exist, so we nullify them.
+      if record_key not in delete_records:
+        delete_records.append(record_key)
 
+
+  # Remove anything from our update records, if it also has a delete record.  Delete records win at this level, and neutralize updates.
+  #   The reason Deletes win, is that Deletes only show up when someone has made an explicit call to delete a record, but positive update
+  #   values will show up every request, because they are always present.  This is why deletes nullify positive updates.
+  for record_key in delete_records:
+    print 'Testing delete key: %s' % str(record_key)
+    # If we have this record in positive-update records, then delete it, because the Delete records nullify it
+    if record_key in records:
+      print 'Deleting key: %s' % str(record_key)
+      del records[record_key]
+  
   
   import pprint
   print '\n\nSet UDN Records:\n%s\n' % pprint.pformat(records)
