@@ -1097,11 +1097,15 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
         # Loop over the working_table, and see if we have any entries we dont have in the rows, but that meet the requirement
         for (item_key, item) in working_table.items():
           if item['id'] not in row_id_list:
+            
+            print 'Found potential match: %s' % item
+            
             # Check if any of the filter key-values dont match, we only want to add it if they all match
             filter_data_matched = True
             for (filter_key, filter_value) in data.items():
               if filter_key not in item or item[filter_key] != filter_value:
                 filter_data_matched = False
+                print '  Not matched: %s != %s' % (item.get(filter_key, '*KEY NOT FOUND*'), filter_value)
                 break
             
             # If all the conditions are met
@@ -1116,7 +1120,7 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
         pass
     
     
-    print '\n\n+++ Delete version: %s' % delete_version
+    # print '\n\n+++ Delete version: %s' % delete_version
     
     # If we have any entries that we might need to delete, in our working version (delete versions)
     if schema['id'] in delete_version:
@@ -1125,19 +1129,19 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
       if schema_table['id'] in delete_schema:
         delete_table = delete_schema[schema_table['id']]
         
-        print '\n\n-*- Found entry in Delete Version table while in Filter: %s' % delete_table
+        # print '\n\n-*- Found entry in Delete Version table while in Filter: %s' % delete_table
         
         delete_rows = []
         
         # Add any rows matching our delete entry to the delete list
         for row in rows:
           if row['id'] in delete_table:
-            print 'Matched delete row: %s' % row
+            # print 'Matched delete row: %s' % row
             delete_rows.append(row)
         
         # Remove any rows marked for deletion
         for row in delete_rows:
-          print 'Removing row: %s' % row
+          # print 'Removing row: %s' % row
           rows.remove(row)
 
 
