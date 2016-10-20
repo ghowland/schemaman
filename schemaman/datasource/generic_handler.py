@@ -744,8 +744,8 @@ def DeleteVersion(request, table, record_id, version_number=None):
       if schema_table['id'] not in delete_data[schema['id']]:
         delete_data[schema['id']][schema_table['id']] = []
       
-      # If we dont have this record in the proper place already (other records of that table to-delete), append it
-      if record_id not in delete_data[schema['id']][schema_table['id']]:
+      # If we dont have this record in the proper place already (other records of that table to-delete), and this isnt a negative number, append it
+      if record_id not in delete_data[schema['id']][schema_table['id']] and record_id >= 0:
         delete_data[schema['id']][schema_table['id']].append(record_id)
     
     # If we have an entry of this record in update_data, then remove that, because Delete always means to clear version data
