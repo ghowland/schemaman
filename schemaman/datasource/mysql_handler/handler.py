@@ -802,9 +802,10 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   # If we had an entry in the delete_change list for this record, remove that.  Any position change wipes out a delete, for obvious reasons.
   if schema['id'] in delete_change:
    if schema_table['id'] in delete_change[schema['id']]:
+    
       # If we have this record's ID in our delete list, remove it
       if data['id'] in delete_change[schema['id']][schema_table['id']]:
-        del delete_change[schema['id']][schema_table['id']][data['id']]
+        delete_change[schema['id']][schema_table['id']].remove(data['id'])
  
 
   
@@ -991,7 +992,7 @@ def Query(request, sql, params=None):
   return result
 
 
-def Filter(request, table, data=None, order_list=None, groupby_list=None, version_number=None, use_working_version=False):
+def Filter(request, table, data=None, use_working_version=False, order_list=None, groupby_list=None, version_number=None):
   """Get 0 or more records from the datasource, based on filtering rules.  Works against a single table.
   
   TODO(g): Implement order_list and groupdby_list functionality for ORDER BY and GROUP BY
@@ -1062,6 +1063,8 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
   # Query
   rows = connection.Query(sql, values)
   
+  
+  print '\n\n<><><> Rows before working version changes: %s (%s)\n\n' % (str(rows), use_working_version)
   
   # If we want to use the working version
   #TODO(g): Move this section to generic_handler.py, because it can be generalized to all DB Handlers.
@@ -1141,7 +1144,7 @@ def Filter(request, table, data=None, order_list=None, groupby_list=None, versio
         
         # Remove any rows marked for deletion
         for row in delete_rows:
-          # print 'Removing row: %s' % row
+          print 'Removing row: %s' % row
           rows.remove(row)
 
 

@@ -527,7 +527,7 @@ def Query(request, sql, params=None):
   return result
 
 
-def Filter(request, table, data=None, order_list=None, groupby_list=None, version_number=None, use_working_version=True):
+def Filter(request, table, data=None, use_working_version=False, order_list=None, groupby_list=None, version_number=None):
   """Get 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables'.
