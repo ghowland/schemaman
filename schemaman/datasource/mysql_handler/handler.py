@@ -755,6 +755,7 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
     version_table = 'version_changelist'
   
   
+  
   # Get the record data set up
   if result:
     record = result[0]
@@ -798,6 +799,7 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
     change_table[data_key] = data
   
   print '\nAfter Setting Data: %s\n\n' % change_table
+
   
   # If we had an entry in the delete_change list for this record, remove that.  Any position change wipes out a delete, for obvious reasons.
   if schema['id'] in delete_change:
@@ -808,6 +810,23 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
         delete_change[schema['id']][schema_table['id']].remove(data['id'])
  
 
+  # Get the Real record (if it exists), so we only store fields that are different.  If all fields are the same, we store nothing
+  real_record = Get(request, table, data['id'], use_working_version=False)
+  
+  # If we have a Real record, then remove any matching fields
+  if real_record:
+    for (real_key, real_value) in real_record.items():
+      # If our change data has this key
+      if real_key in change_table[data_key]:
+        # If the key is the same value as the Real record value, then we dont need it versioned, because it hasnt changed
+        if real_value == change_table[data_key][real_key]:
+          del change_table[data_key][real_key]
+
+
+  # Clean up any unused data structures, so we dont have a bunch of junk hanging around
+  __CleanEmptyVersionData(change)
+  __CleanEmptyVersionData(delete_change)
+
   
   # Put this change record back into the version_change table, so it's saved
   record['data_yaml'] = utility.path.DumpYamlAsString(change)
@@ -817,6 +836,37 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   result_record = SetDirect(request, version_table, record)
   
   return result_record
+
+
+def __CleanEmptyVersionData(version_data):
+  """Cleans up any empty dicts or lists in the version_work data_yaml field data."""
+  schema_keys = version_data.keys()
+  
+  # Loop over our schemas
+  for schema_key in schema_keys:
+    schema_data = version_data[schema_key]
+    table_keys = schema_data.keys()
+    
+    for table_key in table_keys:
+      table_data = schema_data[table_key]
+      
+      # If this is a dict type, we need to go one more level deep.  If not, we dont
+      if type(table_data) == dict:
+        record_keys = table_data.keys()
+        
+        # Loop over our records
+        for record_key in record_keys:
+          # If the record is empty, delete it
+          if not table_data[record_key]:
+            del table_data[record_key]
+      
+      # If the table is empty, delete it
+      if not schema_data[table_key]:
+        del schema_data[table_key]
+    
+    # If this schema is empty, delete it
+    if not version_data[schema_key]:
+      del version_data[schema_key]
 
 
 def SetDirect(request, table, data, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
