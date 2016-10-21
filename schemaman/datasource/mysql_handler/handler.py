@@ -948,7 +948,7 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
           # If we have this record_id, in this table, in this database, then return the working record
           if record_id in table_data:
             
-            print '\n\nFound Working Record: %s\n\n' % table_data[record_id]
+            # print '\n\nFound Working Record: %s\n\n' % table_data[record_id]
             
             # Update this data over the existing table data
             #return table_data[record_id] #TODO(g):REMOVE: Old, used to return this, but I dont want to set every field, so its an overlay now
@@ -1083,8 +1083,6 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
   rows = connection.Query(sql, values)
   
   
-  print '\n\n<><><> Rows before working version changes: %s (%s)\n\n' % (str(rows), use_working_version)
-  
   # If we want to use the working version
   #TODO(g): Move this section to generic_handler.py, because it can be generalized to all DB Handlers.
   if use_working_version:
@@ -1120,14 +1118,14 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
         for (item_key, item) in working_table.items():
           if item['id'] not in row_id_list:
             
-            print 'Found potential match: %s' % item
+            # print 'Found potential match: %s' % item
             
             # Check if any of the filter key-values dont match, we only want to add it if they all match
             filter_data_matched = True
             for (filter_key, filter_value) in data.items():
               if filter_key not in item or item[filter_key] != filter_value:
                 filter_data_matched = False
-                print '  Not matched: %s != %s' % (item.get(filter_key, '*KEY NOT FOUND*'), filter_value)
+                # print '  Not matched: %s != %s' % (item.get(filter_key, '*KEY NOT FOUND*'), filter_value)
                 break
             
             # If all the conditions are met
@@ -1163,7 +1161,7 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
         
         # Remove any rows marked for deletion
         for row in delete_rows:
-          print 'Removing row: %s' % row
+          # print 'Removing row: %s' % row
           rows.remove(row)
 
 
