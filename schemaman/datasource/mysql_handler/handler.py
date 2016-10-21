@@ -818,7 +818,7 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
     for (real_key, real_value) in real_record.items():
       # If our change data has this key
       if real_key in change_table[data_key]:
-        # If the key is the same value as the Real record value, then we dont need it versioned, because it hasnt changed
+        # If the key is the same value as the Real record value, then we dont need it versioned, because it hasnt changed, and it isnt the 'id' key
         if real_value == change_table[data_key][real_key]:
           del change_table[data_key][real_key]
 
@@ -953,6 +953,8 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
             # Update this data over the existing table data
             #return table_data[record_id] #TODO(g):REMOVE: Old, used to return this, but I dont want to set every field, so its an overlay now
             found_version_record = table_data[record_id]
+            # Ensure it has a record ID.  We remove this from the data, since it doesnt change, and it needs to be added back on these transition points
+            found_version_record['id'] = record_id
     
     except datasource.VersionNotFound, e:
       pass
@@ -1119,6 +1121,10 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
         
         # Loop over the working_table, and see if we have any entries we dont have in the rows, but that meet the requirement
         for (item_key, item) in working_table.items():
+          # Set the ID field.  We remove it when putting it into the working table, because it doesnt change, so we have to add it back when creating records from that that table
+          item['id'] = item_key
+          
+          # If this is a potential match
           if item['id'] not in row_id_list:
             
             print 'Found potential match: %s' % item
