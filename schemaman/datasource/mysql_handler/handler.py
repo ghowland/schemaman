@@ -1016,6 +1016,9 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
   
   TODO(g): Implement order_list and groupdby_list functionality for ORDER BY and GROUP BY
   """
+  
+  # print '\nFilter: %s: %s' % (table, data)
+  
   if not data:
     data = {}
   
@@ -1118,14 +1121,14 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
         for (item_key, item) in working_table.items():
           if item['id'] not in row_id_list:
             
-            # print 'Found potential match: %s' % item
+            print 'Found potential match: %s' % item
             
             # Check if any of the filter key-values dont match, we only want to add it if they all match
             filter_data_matched = True
             for (filter_key, filter_value) in data.items():
               if filter_key not in item or item[filter_key] != filter_value:
                 filter_data_matched = False
-                # print '  Not matched: %s != %s' % (item.get(filter_key, '*KEY NOT FOUND*'), filter_value)
+                print '  Not matched: %s != %s' % (item.get(filter_key, '*KEY NOT FOUND*'), filter_value)
                 break
             
             # If all the conditions are met
