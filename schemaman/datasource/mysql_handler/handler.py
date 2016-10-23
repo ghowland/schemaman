@@ -1015,8 +1015,6 @@ def Query(request, sql, params=None):
 
 def Filter(request, table, data=None, use_working_version=False, order_list=None, groupby_list=None, version_number=None):
   """Get 0 or more records from the datasource, based on filtering rules.  Works against a single table.
-  
-  TODO(g): Implement order_list and groupdby_list functionality for ORDER BY and GROUP BY
   """
   
   # print '\nFilter: %s: %s' % (table, data)
@@ -1024,7 +1022,7 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
   if not data:
     data = {}
   
-  base_sql = "SELECT * FROM `%s` WHERE %s"
+  base_sql = "SELECT * FROM `%s` WHERE %s %s %s"
   
   keys = data.keys()
   keys.sort()
@@ -1032,6 +1030,18 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
   keys_ticked = []
   where_list = []
   values = []
+  
+  # Order By
+  if order_list:
+    order_by = ' ORDER BY %s' % ', '.join(order_list)
+  else:
+    order_by = ''
+  
+  # Group By
+  if groupby_list:
+    group_by = ' GROUP BY %s' % ', '.join(groupby_list)
+  else:
+    group_by = ''
   
   
   # Get our backticked wrapped insert keys, our value list, and our update setting
@@ -1072,11 +1082,11 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
   
   # Create our final SQL, if we had WHERE list items
   if where_list:
-    sql = base_sql % (table, where_sql)
+    sql = base_sql % (table, where_sql, order_by, group_by)
   
   # Else, get all the records
   else:
-    sql = "SELECT * FROM `%s`" % table
+    sql = "SELECT * FROM `%s` %s %s" % (table, order_by, group_by)
   
   # Log('\n\nGetFromData: %s: %s\nSQL:%s\nValues:%s\n' % (table, data, sql, values))
   
