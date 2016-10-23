@@ -835,3 +835,60 @@ def CleanEmptyVersionData(version_data):
     # If this schema is empty, delete it
     if not version_data[schema_key]:
       del version_data[schema_key]
+
+
+def ListOfDictsToValueList(list_of_dicts, key, convert=None):
+    """Returns a list of values, from the key of a list of dicts.  May convert type of values.
+
+    Args:
+        list_of_dicts: list of dicts
+        key: value (any, for key in the dicts)
+        convert: type, examples: str, int, float, etc.  Will be used as a function to convert value types.  Can also pass in any function that takes 1 value and emits 1 value.
+
+    Returns: list of values
+    """
+    result_list = []
+
+    for item in list_of_dicts:
+        value = item[key]
+
+        if convert:
+          value = convert(value)
+
+        result_list.append(value)
+
+    return result_list
+
+
+def ListOfDictsToDict(list_of_dicts, key):
+    """Returns a dict, from the key of a list of dicts.
+
+    Args:
+        list_of_dicts: list of dicts
+        key: value (any, for key in the dicts)
+
+    Returns: list of values
+    """
+    result = {}
+
+    for item in list_of_dicts:
+        result[item[key]] = item
+
+    return result
+
+
+def ListOfDictsToKeyValueDict(list_of_dicts, key, value_key):
+    """Returns a dict, from the key of a list of dicts.
+
+    Args:
+        list_of_dicts: list of dicts
+        key: value (any, for key in the dicts)
+
+    Returns: list of values
+    """
+    result = {}
+
+    for item in list_of_dicts:
+        result[item[key]] = item[value_key]
+
+    return result
