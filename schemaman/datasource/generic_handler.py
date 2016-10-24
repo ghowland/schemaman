@@ -198,6 +198,18 @@ def GetInfoSchemaAndTable(request, table_name):
   return (schema, schema_table)
 
 
+def GetInfoSchemaAndTableById(request, table_id):
+  """Returns the record for this schema table data (schema_table)
+  
+  This is a helper function, calls GetInfoSchema() and GetInfoSchemaTable()
+  """
+  handler = DetermineHandlerModule(request)
+  
+  (schema, schema_table) = handler.GetInfoSchemaAndTableById(request, table_id)
+  
+  return (schema, schema_table)
+
+
 def GetInfoSchemaTableField(request, schema_table, field_name):
   """Returns the record for this schema field data (schema_table_field)"""
   handler = DetermineHandlerModule(request)

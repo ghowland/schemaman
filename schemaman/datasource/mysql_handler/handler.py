@@ -1065,6 +1065,9 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
     
     # Else, we want to do something being 
     else:
+      #TODO(g): Do other op-codes too, so we can do many kinds of queries easily in this way
+      pass
+      
       # If the field is 'IN' a list of values
       if data[keys[count]][0].upper() == 'IN':
         match_list = data[keys[count]][1]
