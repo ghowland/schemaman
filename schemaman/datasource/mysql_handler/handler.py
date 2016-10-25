@@ -819,7 +819,8 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
       # If our change data has this key
       if real_key in change_table[data_key]:
         # If the key is the same value as the Real record value, then we dont need it versioned, because it hasnt changed, and it isnt the 'id' key
-        if real_value == change_table[data_key][real_key]:
+        #   Also, delete if the real value is NULL, and we have an empty string (no change)
+        if real_value == change_table[data_key][real_key] or (real_value == None and change_table[data_key][real_key] == ''):
           del change_table[data_key][real_key]
 
 
