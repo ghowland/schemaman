@@ -1212,7 +1212,7 @@ def GetWorkingVersionData(request, username=None):
   user_list = Filter(request, 'user', {'name':username})
   
   if not user_list:
-    return None
+    return ({}, [])
   
   user = user_list[0]
   
