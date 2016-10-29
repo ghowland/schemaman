@@ -4,6 +4,7 @@
 import os
 import threading
 import time
+from operator import itemgetter
 
 from schemaman.utility.error import *
 from schemaman.utility.path import *
@@ -668,20 +669,20 @@ def GetNextNegativeNumber(request, table):
   #TODO
   
   # Get the lock key for this schema table row
-  lock = GetSchemaTableRowLockKey(request, table, schema_table['id'], schema=schema)
+  lock = GetSchemaTableRowLockKey(request, table, schema_table['name'], schema=schema)
 
   try:
     # Get the lock, so we dont collide on this
     AcquireLock(request, lock)
     
     # Get the next negative from the current storage
-    next_negative_id = table_row['next_negative_id']
+    next_negative_id = schema_table['next_negative_id']
     
     # Decrement the next negative ID, so we always get original ones, and they wont conflict
-    table_row['next_negative_id'] -= 1
+    schema_table['next_negative_id'] -= 1
     
     # Save with the new decremented number
-    Set(request, 'schema_table', table_row)
+    Set(request, 'schema_table', schema_table)
   
   finally:
     # Release the lock
@@ -904,3 +905,26 @@ def ListOfDictsToKeyValueDict(list_of_dicts, key, value_key):
         result[item[key]] = item[value_key]
 
     return result
+
+
+def SortRows(rows, order_list):
+  """Returns a list of dicts.  Sorts rows by order_list, like Filter.
+  
+  Used for sorting Versioned data, which appends to Filter() real results, but must be re-ordered to be correct.
+  
+  Returns: list of dict (rows)
+  """
+  comparers = [((itemgetter(col[1:].strip()), -1) if col.startswith('-') else
+                (itemgetter(col.strip()), 1)) for col in order_list]
+  
+  def comparer(left, right):
+    for fn, mult in comparers:
+      result = cmp(fn(left), fn(right))
+      if result:
+        return mult * result
+    else:
+      return 0
+  
+  return sorted(rows, cmp=comparer)
+
+  
