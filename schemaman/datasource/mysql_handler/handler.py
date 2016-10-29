@@ -1162,11 +1162,14 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
         #TODO(g): Order by, group by, etc.  We can control ALL the data so it's perfectly integrated, and looks like its part of the query
         pass
       
-        # If we want these ordered, we need to sort them again
-        if order_list:
-          # Sort the rows by the order_list, so we have an ordered return set again
-          rows = datasource.SortRows(rows, order_list)
-          
+    # If we want these ordered, we need to sort them again
+    if order_list:
+      print 'Pre-Sorted rows: %s' % rows
+
+      # Sort the rows by the order_list, so we have an ordered return set again
+      rows = datasource.SortRows(rows, order_list)
+      
+      print 'Sorted rows: %s' % rows
     
     
     # print '\n\n+++ Delete version: %s' % delete_version

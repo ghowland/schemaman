@@ -914,17 +914,18 @@ def SortRows(rows, order_list):
   
   Returns: list of dict (rows)
   """
-  comparers = [((itemgetter(col[1:].strip()), -1) if col.startswith('-') else
-                (itemgetter(col.strip()), 1)) for col in order_list]
+  comparers = [
+    ((i(col[1:].strip()), -1) if col.startswith('-') else (itemgetter(col.strip()), 1))
+    for col in order_list
+  ]
   
   def comparer(left, right):
-    for fn, mult in comparers:
-      result = cmp(fn(left), fn(right))
-      if result:
-        return mult * result
-    else:
-      return 0
-  
+    comparer_iter = (
+      cmp(fn(left), fn(right)) * mult
+      for fn, mult in comparers
+    )
+    return next((result for result in comparer_iter if result), 0)
+    
   return sorted(rows, cmp=comparer)
 
   
