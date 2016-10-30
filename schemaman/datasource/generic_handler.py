@@ -391,6 +391,27 @@ def Set(request, table, data, version_management=False, commit_version=False, ve
   return result
 
 
+def SetDirect(request, table, data, commit=True):
+  """Put (insert/update) data directly into this datasource.  Never use version management.
+  
+  Works as a single transaction, if not using version_managament.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    table: string, name of table to operate on
+    data: dict, record to set into table
+    commit: bool (default True), if not using version_management(==False) then this will be committed immediately,
+        instead of waiting for a transactional Commit()
+  
+  Returns: int or None, if creating a new record this returns the newly created record primary key (ex: `id`), otherwise None
+  """
+  handler = DetermineHandlerModule(request)
+  
+  result = handler.SetDirect(request, table, data, commit=commit)
+  
+  return result
+
+
 def SetVersion(request, table, data, commit_version=False, version_number=None):
   """Put (insert/update) data into this datasource's Version Management tables (working, unless version_number is specified).
   
@@ -574,6 +595,21 @@ def GetWorkingVersionData(request, username=None):
   handler = DetermineHandlerModule(request)
 
   result = handler.GetWorkingVersionData(request, username=username)
+  
+  return result
+
+
+def SetWorkingVersionData(request, working_version, delete_version=None):
+  """Returns a dict or None, with the current working data (already parsed from `version_working.data_yaml`
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+  
+  Returns: dict or None
+  """
+  handler = DetermineHandlerModule(request)
+
+  result = handler.SetWorkingVersionData(request, working_version, delete_version=delete_version)
   
   return result
 

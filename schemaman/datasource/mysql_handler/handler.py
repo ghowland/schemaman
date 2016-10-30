@@ -151,8 +151,12 @@ def ImportData(request, drop_first=False, transaction=False):
   pass
 
 
-def GetUser(request, username):
+def GetUser(request, username=None):
   """Returns user.id (int)"""
+  # We allow an explicit username, but otherwise use the requester's username
+  if not username:
+    username = request.username
+  
   # Get a connection
   connection = GetConnection(request)
   
@@ -976,7 +980,7 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
     # If we also found a version record, overlay it
     if found_version_record:
       record.update(found_version_record)
-      print 'Found Version Record, updating over Real Record:  Returning: %s (%s): %s' % (record_id, type(record_id), record)
+      # print 'Found Version Record, updating over Real Record:  Returning: %s (%s): %s' % (record_id, type(record_id), record)
     
   else:
     record = None
@@ -986,7 +990,7 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
     if found_version_record:
       record = found_version_record
    
-      print 'Couldnt find Real Record, but Found Version Record:  Returning: %s (%s): %s' % (record_id, type(record_id), record)
+      # print 'Couldnt find Real Record, but Found Version Record:  Returning: %s (%s): %s' % (record_id, type(record_id), record)
  
   return record
 
@@ -1141,14 +1145,14 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
           # If this is a potential match
           if item['id'] not in row_id_list:
             
-            print 'Found potential match: %s' % item
+            # print 'Found potential match: %s' % item
             
             # Check if any of the filter key-values dont match, we only want to add it if they all match
             filter_data_matched = True
             for (filter_key, filter_value) in data.items():
               if filter_key not in item or item[filter_key] != filter_value:
                 filter_data_matched = False
-                print '  Not matched: %s != %s' % (item.get(filter_key, '*KEY NOT FOUND*'), filter_value)
+                # print '  Not matched: %s != %s' % (item.get(filter_key, '*KEY NOT FOUND*'), filter_value)
                 break
             
             # If all the conditions are met
@@ -1164,12 +1168,8 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
       
     # If we want these ordered, we need to sort them again
     if order_list:
-      print 'Pre-Sorted rows: %s' % rows
-
       # Sort the rows by the order_list, so we have an ordered return set again
       rows = datasource.SortRows(rows, order_list)
-      
-      print 'Sorted rows: %s' % rows
     
     
     # print '\n\n+++ Delete version: %s' % delete_version
@@ -1237,6 +1237,35 @@ def GetWorkingVersionData(request, username=None):
     delete_version = []
   
   return (update_version, delete_version)
+
+
+def SetWorkingVersionData(request, working_version, delete_version=None):
+  """Returns the version_working record's data_yaml, already parsed to Python data dict
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+  
+  Returns: tuple of (dict, dict), which is (update_version, delete_version), respectively
+  """
+  user = GetUser(request)
+  
+  # Get the current working record directly, if we have it
+  working_list = Filter(request, 'version_working', {'user_id': user['id']})
+  if working_list:
+    record = working_list[0]
+  else:
+    record = {'user_id': user['id'], 'delete_data_yaml': None}
+  
+  
+  # Convert to YAML, for storage
+  record['data_yaml'] = utility.path.DumpYamlAsString(working_version)
+  
+  # If we specified delete, update that too
+  if delete_version:
+    record['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_version)
+  
+  # Update the working record
+  SetDirect(request, 'version_working', record)
 
 
 def Delete(request, table, record_id, noop=False, commit=True):
