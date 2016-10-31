@@ -452,6 +452,10 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
   
   # Turn UDN into records
   for (udn, value) in data.items():
+    # If we are instructed to ignore this one, skip it
+    if udn.startswith('__skip.'):
+      continue
+    
     # Check if we are deleting a record
     is_delete = False
     if udn.startswith('__delete.'):
