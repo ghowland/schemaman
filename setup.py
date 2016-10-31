@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='schemaman',
-      version='0.1.17',
+      version='0.1.18',
       description='SchemaMan is a schema manager and query wrapper for multiple database backends, with Version and Change Management.',
       url='http://github.com/ghowland/schemaman',
       author='Geoff Howland',
