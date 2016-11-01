@@ -949,7 +949,7 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
 
       working_data = utility.path.LoadYamlFromString(working_version['data_yaml'])
 
-      #TODO(g0): Also handle deletes
+      #TODO(g): Also handle deletes
       pass
       
       # If we have the working data (!None), and this scheme ID is in it, then look deeper
@@ -994,7 +994,7 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
     
     record_data = utility.path.LoadYamlFromString(version_record['data_yaml'])
     
-    #TODO(g0): Also handle deletes
+    #TODO(g): Also handle deletes
     pass
     
     # If we have the working data (!None), and this scheme ID is in it, then look deeper
@@ -1009,15 +1009,16 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
           found_version_record = table_data[record_id]
           
           # Ensure it has a record ID.  We remove this from the data, since it doesnt change, and it needs to be added back on these transition points
-          found_version_record['id'] = record_id    
-          
-          print 'Found version record: %s' % found_version_record
-        else:
-          print 'Couldnt find record ID in version record: %s' % record_id
-      else:
-        print 'Couldnt find schema table ID in version record: %s' % schema_table['id']
-    else:
-      print 'Couldnt find schema ID in version record: %s (%s)' % (schema['id'], type(schema['id']))
+          found_version_record['id'] = record_id
+    #TODO(g):REMOVE: Once we are sure this code is stable and we dont need it.  Lots of lines, and I think things are fine...
+    #       
+    #       print 'Found version record: %s' % found_version_record
+    #     else:
+    #       print 'Couldnt find record ID in version record: %s' % record_id
+    #   else:
+    #     print 'Couldnt find schema table ID in version record: %s' % schema_table['id']
+    # else:
+    #   print 'Couldnt find schema ID in version record: %s (%s)' % (schema['id'], type(schema['id']))
   
   
   #TODO(g): Confirm this is the primary key name, not just "id" all the time.  Can look this up in our schema_data_paths from connection_data...
