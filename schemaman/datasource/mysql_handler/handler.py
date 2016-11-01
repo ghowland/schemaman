@@ -17,6 +17,10 @@ class InvalidArguments(Exception):
   """Something wasnt right with the args."""
 
 
+class RecordNotFound(Exception):
+  """Couldnt find the record."""
+
+
 def ReleaseConnections(request):
   """Release any connections tied with this request_number"""
   #TODO(g): Flatten this call path
@@ -952,12 +956,11 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
 
           # If we have this record_id, in this table, in this database, then return the working record
           if record_id in table_data:
-            
             # print '\n\nFound Working Record: %s\n\n' % table_data[record_id]
             
             # Update this data over the existing table data
-            #return table_data[record_id] #TODO(g):REMOVE: Old, used to return this, but I dont want to set every field, so its an overlay now
             found_version_record = table_data[record_id]
+            
             # Ensure it has a record ID.  We remove this from the data, since it doesnt change, and it needs to be added back on these transition points
             found_version_record['id'] = record_id
     
@@ -966,8 +969,32 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
   
   # Else, if they want to retrieve a specified version number
   elif version_number:
-    raise Exception('TBD: Not yet implemented: Get by version number...')
+    # Look in the pending table first
+    version_record = Get(request, 'version_pending', version_number)
     
+    # If we didnt find it in pending, check in committed
+    if not version_record:
+      version_record = Get(request, 'version_commit', version_number)
+      
+      # If we didnt find it in commited, error
+      if not version_record:
+        raise RecordNotFound('Couldnt find version record: Table: %s:  Version: %s  Record ID: %s' % (table, version_number, record_id))
+    
+    
+    # If we have the working data (!None), and this scheme ID is in it, then look deeper
+    if version_record and schema['id'] in version_record:
+      db_data = version_record[schema['id']]
+      if schema_table['id'] in db_data:
+        table_data = db_data[schema_table['id']]
+
+        # If we have this record_id, in this table, in this database, then return the working record
+        if record_id in table_data:
+          # Update this data over the existing table data
+          found_version_record = table_data[record_id]
+          
+          # Ensure it has a record ID.  We remove this from the data, since it doesnt change, and it needs to be added back on these transition points
+          found_version_record['id'] = record_id    
+  
   
   #TODO(g): Confirm this is the primary key name, not just "id" all the time.  Can look this up in our schema_data_paths from connection_data...
   #TODO(g): Allow multiple fields for primary key, and do the right thing with them
