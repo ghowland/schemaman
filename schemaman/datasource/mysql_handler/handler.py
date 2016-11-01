@@ -175,6 +175,22 @@ def GetUser(request, username=None):
   return user
 
 
+def GetUserById(request, user_id):
+  """Returns user record (dict)"""
+  # Get a connection
+  connection = GetConnection(request)
+  
+  #TODO(g): Need to specify the schema (DB) too, otherwise this is wrong...  Get from the request datasource info?  We populated, so we should know how it works...
+  sql = "SELECT * FROM `user` WHERE id = %s"
+  result = connection.Query(sql, [user_id])
+  if not result:
+    raise Exception('Unknown user: %s' % user_id)
+  
+  user = result[0]
+
+  return user
+
+
 def GetInfoSchema(request):
   """Returns the record for this schema data (schema)"""
   # Get a connection
