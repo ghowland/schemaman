@@ -943,11 +943,15 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
   if use_working_version and not version_number:
     # Get the schema and table info
     (schema, schema_table) = GetInfoSchemaAndTable(request, table)
+    
     try:
       working_version = GetUserVersionWorkingRecord(request)
 
       working_data = utility.path.LoadYamlFromString(working_version['data_yaml'])
 
+      #TODO(g0): Also handle deletes
+      pass
+      
       # If we have the working data (!None), and this scheme ID is in it, then look deeper
       if working_data and schema['id'] in working_data:
         db_data = working_data[schema['id']]
@@ -972,18 +976,30 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
     # Look in the pending table first
     version_record = Get(request, 'version_pending', version_number)
     
+    print 'Found pending version: %s' % version_record
+    
     # If we didnt find it in pending, check in committed
     if not version_record:
       version_record = Get(request, 'version_commit', version_number)
       
+      print 'Found committed version: %s' % version_record
+    
       # If we didnt find it in commited, error
       if not version_record:
         raise RecordNotFound('Couldnt find version record: Table: %s:  Version: %s  Record ID: %s' % (table, version_number, record_id))
     
     
+    # Get the schema and table info
+    (schema, schema_table) = GetInfoSchemaAndTable(request, table)
+    
+    record_data = utility.path.LoadYamlFromString(version_record['data_yaml'])
+    
+    #TODO(g0): Also handle deletes
+    pass
+    
     # If we have the working data (!None), and this scheme ID is in it, then look deeper
-    if version_record and schema['id'] in version_record:
-      db_data = version_record[schema['id']]
+    if schema['id'] in record_data:
+      db_data = record_data[schema['id']]
       if schema_table['id'] in db_data:
         table_data = db_data[schema_table['id']]
 
@@ -994,6 +1010,14 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
           
           # Ensure it has a record ID.  We remove this from the data, since it doesnt change, and it needs to be added back on these transition points
           found_version_record['id'] = record_id    
+          
+          print 'Found version record: %s' % found_version_record
+        else:
+          print 'Couldnt find record ID in version record: %s' % record_id
+      else:
+        print 'Couldnt find schema table ID in version record: %s' % schema_table['id']
+    else:
+      print 'Couldnt find schema ID in version record: %s (%s)' % (schema['id'], type(schema['id']))
   
   
   #TODO(g): Confirm this is the primary key name, not just "id" all the time.  Can look this up in our schema_data_paths from connection_data...
