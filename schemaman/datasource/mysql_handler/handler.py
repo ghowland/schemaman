@@ -1291,20 +1291,25 @@ def GetWorkingVersionData(request, username=None):
   if not user_list:
     return ({}, [])
   
-  user = user_list[0]
+  try:
+    user = user_list[0]
+    
+    version_working = Get(request, 'version_working', user['id'])
+    
+    update_version = utility.path.LoadYamlFromString(version_working['data_yaml'])
+    delete_version = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
   
-  version_working = Get(request, 'version_working', user['id'])
+    # Ensure they are properly initialized
+    if update_version == None:
+      update_version = {}
+    if delete_version == None:
+      delete_version = []
+    
+    return (update_version, delete_version)
   
-  update_version = utility.path.LoadYamlFromString(version_working['data_yaml'])
-  delete_version = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
-  
-  # Ensure they are properly initialized
-  if update_version == None:
-    update_version = {}
-  if delete_version == None:
-    delete_version = []
-  
-  return (update_version, delete_version)
+  except Exception, e:
+    print 'GetWorkingVersionData: Failed: %s: %s' % (username, e)
+    return ({}, [])
 
 
 def SetWorkingVersionData(request, working_version, delete_version=None):
