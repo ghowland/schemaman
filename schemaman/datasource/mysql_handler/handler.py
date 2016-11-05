@@ -1334,7 +1334,7 @@ def SetWorkingVersionData(request, working_version, delete_version=None):
   record['data_yaml'] = utility.path.DumpYamlAsString(working_version)
   
   # If we specified delete, update that too
-  if delete_version:
+  if delete_version != None:
     record['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_version)
   
   # Update the working record
