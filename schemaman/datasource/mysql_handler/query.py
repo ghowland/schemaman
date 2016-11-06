@@ -191,12 +191,31 @@ class Connection(object):
         
     
     try:
-      if not params:
-        Log('Query: %s' % sql)
-      else:
-        Log('Query: %s -- %s' % (sql, params))
+      done = False
+      retry = 0
       
-      result = Query(self.connection, self.cursor, sql, params=params, commit=commit)
+      while not done:
+        try:
+          if not params:
+            Log('Query: %s' % sql)
+          else:
+            Log('Query: %s -- %s' % (sql, params))
+          
+          result = Query(self.connection, self.cursor, sql, params=params, commit=commit)
+          done = True
+        
+        # Handle DB connection problems
+        except MySQLdb.OperationalError, e:
+          print 'MySQL: OperationError: %s' % e
+          
+          retry += 1
+          if retry >= 3:
+            raise Exception('Failed %s times: %s' % (retry-1, e))
+          
+          # Else, reconnect, something went wrong, this is the best way to fix it
+          else:
+            self.Connect()
+            
     
     finally:
       if set_request_lock:
@@ -347,6 +366,9 @@ def Query(conn, cursor, sql, params=None, commit=True):
   
   else:
     result = None
+  
+  # We completed our work, and are done
+  done = True
   
   return result
 
