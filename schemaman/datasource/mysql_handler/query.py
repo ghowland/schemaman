@@ -38,7 +38,7 @@ REQUEST_QUERY_LOCK = {}
 
 
 #TODO(g): Make this a base class, that each Handler type sub-classes.  Useful in this case, as it's an interface, and some methods are more virtual than others.  It's good to have a base class for the interface, otherwise every handler implements its own base, and they seem more disconnected...
-class Connection(object):
+class Connection:
   """This wraps MySQL connection and cursor objects, as well as tracks the progress of any requests, and if it is available for use by a new request."""
   
   def __init__(self, connection_data, server_id, request):
@@ -238,22 +238,6 @@ class Connection(object):
     return result
 
 
-class ConnectionProxy(object):
-  """Create a proxy to the connection-- to be bassed back by GetConnection.
-  This means we can simply rely on the GC of this object to release the sessions
-  """
-  def __init__(self, conn):
-    self.__conn = conn
-  
-  def __getattr__(self, name):
-    if name == '__conn':
-      return object.__getattribute__(self, name)
-    return object.__getattribute__(self.__conn, name)
-  
-  def __del__(self):
-    self.__conn.Release()
-
-
 def MySQLReleaseConnections(request):
   """Release any connections tied with this request_number
   
@@ -302,13 +286,15 @@ def GetConnection(request, server_id=None):
   #TODO(g): Turn this into a function?  I have to duplicate this from the connection class otherwise...  Or only do it here?
   server_key = '%s.%s' % (request.connection_data['alias'], server_id)
 
+
   # Look through the current connection pool, to see if we already have a connection for this request_number
   if server_key in CONNECTION_POOL_POOL:
     for connection in CONNECTION_POOL_POOL[server_key]:
       # If this connection is for the same request, use it
       if connection.IsUsedByRequest(request):
-        return ConnectionProxy(connection)
+        return connection
   
+
   # Look through current connection pool, to see if we have any available connections in this server, that we can use
   if server_key in CONNECTION_POOL_POOL:
     for connection in CONNECTION_POOL_POOL[server_key]:
@@ -316,7 +302,8 @@ def GetConnection(request, server_id=None):
       if connection.IsAvailable():
         #TODO(g): Make this a method to set it to this request
         connection.Acquire(request)
-        return ConnectionProxy(connection)
+        return connection
+
   
   # Create the connection
   connection = Connection(request.connection_data, server_id, request)
@@ -340,7 +327,7 @@ def GetConnection(request, server_id=None):
     finally:
       CONNECTION_POOL_POOL_LOCK.release()
   
-  return ConnectionProxy(connection)
+  return connection
 
 
 def Query(conn, cursor, sql, params=None, commit=True):
