@@ -25,6 +25,9 @@ class Request:
   def __init__(self, connection_data, username, authentication, request_number=None, server_id=None, use_version_management=True, auto_commit=False):
     self.connection_data = connection_data
     
+    if username == None:
+      raise RequestInvalid('A username must be specified: %s: %s' % (connection_data, username))
+    
     self.username = username
     self.authentication = authentication
     
