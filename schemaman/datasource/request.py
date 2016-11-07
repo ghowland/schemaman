@@ -15,6 +15,10 @@ GLOBAL_REQUEST_COUNTER = 1
 GLOBAL_REQUEST_COUNTER_LOCK = threading.Lock()
 
 
+class RequestInvalid(Exception):
+  """This request is no longer valid."""
+
+
 class Request:
   """Contains request information, and can close transactions due to scope GC collections."""
   
@@ -50,6 +54,9 @@ class Request:
     # Log is a list of tuples (text, data), 
     self.log = []
     
+    # Track whether we have released this yet
+    self.is_released = False
+    
     
     # Get the user record
     #TODO(g): Where we get the user records needs to be configurable, and currently isnt.  Fix later, same with VMCM
@@ -59,12 +66,21 @@ class Request:
   def __del__(self):
     """Going out of scope, ensure we release any connections that we have."""
     try:
-      self.ReleaseConnections()
+      self.Release()
     
     # Probably the interpretter is shutting down if we are getting this ("'NoneType' object is not callable"), so ignore it
     except TypeError, e:
       pass
+    
   
+  def Release(self):
+    """Cleanup this request.  Relase it."""
+    # We are released, so we should not be used anymore
+    self.is_released = True
+    
+    # Release all our connections
+    self.ReleaseConnections()
+
   
   def Log(self, text, data):
     """Log any data we want to about this request."""
@@ -74,11 +90,14 @@ class Request:
   def ReleaseConnections(self):
     """Release any connections we have open and tied to this request_number (wont close them)"""
     for handler in self.datasource_handlers:
-      handler.ReleaseConnections(self.connection_data, self.request_number)
+      handler.ReleaseConnections(self)
 
 
   def AddHandler(self, handler):
     """Allows us to track all handlers that might have datasource connections for us, so we can release them explicitly and efficiently."""
+    if self.is_released:
+      raise RequestInvalid('This request has already been released.  It cannot be used further.')
+    
     if handler not in self.datasource_handlers:
       self.datasource_handlers.append(handler)
 

@@ -52,7 +52,7 @@ class Connection:
     self.request = request
     
     # Generate the server key, since this specifies which CONNECTION_POOL_POOL we are in
-    self.server_key = '%s.%s' % (connection_data['alias'], server_id)
+    self.server_key = GetServerKey(request)
     
     self.connection = None
     self.cursor = None
@@ -72,6 +72,8 @@ class Connection:
 
   def Close(self):
     """Close the cursor and connection, if they are open, and set them to None"""
+    Log('Closing connection: MySQL: %s: %s' % (connection_data['datasource']['database'], self.server_key))
+    
     if self.cursor:
       try:
         self.cursor.close()
@@ -87,6 +89,8 @@ class Connection:
 
   def Release(self):
     """Release this connection."""
+    Log('Releasing connection: MySQL: %s: %s' % (self.server_key, self.request.username))
+    
     self.request = None
 
 
@@ -94,6 +98,8 @@ class Connection:
     """Acquire this Connection for this Request."""
     if self.request != None:
       raise Exception('Attempting to Acquire a Connection when it is already owned: %s' % request)
+    
+    Log('Acquiring connection: MySQL: %s: %s' % (self.server_key, request.username))
     
     self.request = request
 
@@ -104,7 +110,14 @@ class Connection:
     NOTE(g): This does not verify the connection, just ensures that we think we have a valid connection.
     """
     if self.request and self.connection:
-      return False
+      # If this request has been released, we are done with it, and can be used
+      if self.request.is_released:
+        # Clear the request and let them know we are available
+        self.request = None
+        return True
+      
+      else:
+        return False
     
     else:
       return True
@@ -238,6 +251,14 @@ class Connection:
     return result
 
 
+def GetServerKey(request):
+  """Returns string, the server key, for use in the CONNECTION_POOL_POOL at top level dict"""
+  # Generate the server key, since this specifies which CONNECTION_POOL_POOL we are in
+  server_key = '%s.%s' % (request.connection_data['alias'], request.server_id)
+  
+  return server_key
+  
+
 def MySQLReleaseConnections(request):
   """Release any connections tied with this request_number
   
@@ -246,19 +267,14 @@ def MySQLReleaseConnections(request):
   global CONNECTION_POOL_POOL
   
   # Generate the server key, since this specifies which CONNECTION_POOL_POOL we are in
-  #TODO(g): Turn this into a function?  I have to duplicate this from the connection class otherwise...  Or only do it here?
-  server_key = '%s.%s' % (request.connection_data['alias'], request.server_id)
+  server_key = GetServerKey(request)
 
   # Look through the current connection pool, to see if we already have a connection for this request_number
   if server_key in CONNECTION_POOL_POOL:
     for connection in CONNECTION_POOL_POOL[server_key]:
       # If this connection is for the same request, release it
       if connection.IsUsedByRequest(request):
-        if MYSQL == 'ORACLE':
-          connection.Release()
-          
-        else:
-          connection.close()
+        connection.Release()
 
 
 def GetConnection(request, server_id=None):
@@ -283,8 +299,7 @@ def GetConnection(request, server_id=None):
 
 
   # Generate the server key, since this specifies which CONNECTION_POOL_POOL we are in
-  #TODO(g): Turn this into a function?  I have to duplicate this from the connection class otherwise...  Or only do it here?
-  server_key = '%s.%s' % (request.connection_data['alias'], server_id)
+  server_key = GetServerKey(request)
 
 
   # Look through the current connection pool, to see if we already have a connection for this request_number
@@ -322,7 +337,7 @@ def GetConnection(request, server_id=None):
   else:
     try:
       CONNECTION_POOL_POOL_LOCK.acquire()
-      Log('Appending to existing MySQL connection pool: %s' % connection.server_key)
+      Log('Appending to existing MySQL connection pool: %s  (Count: %s)' % (connection.server_key, len(CONNECTION_POOL_POOL[connection.server_key])))
       CONNECTION_POOL_POOL[connection.server_key].append(connection)
     finally:
       CONNECTION_POOL_POOL_LOCK.release()
