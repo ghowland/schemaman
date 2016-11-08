@@ -232,7 +232,10 @@ class Connection:
     
     finally:
       if set_request_lock:
-        REQUEST_QUERY_LOCK[self.request.request_number].release()
+        try:
+          REQUEST_QUERY_LOCK[self.request.request_number].release()
+        except Exception, e:
+          pass
     
     return result
   
