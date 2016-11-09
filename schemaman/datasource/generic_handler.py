@@ -220,7 +220,7 @@ def GetInfoSchemaTableField(request, schema_table, field_name):
   return result
 
 
-def GetUser(request, username=None):
+def GetUser(request, username=None, use_cache=True):
   """Returns user record (dict)"""
   handler = DetermineHandlerModule(request)
   
@@ -230,17 +230,17 @@ def GetUser(request, username=None):
   
   
   #TODO(g): This needs to be configurable, so we can specify where to get authentication information...
-  user = handler.GetUser(request, username)
+  user = handler.GetUser(request, username, use_cache=use_cache)
   
   return user
 
 
-def GetUserById(request, user_id):
+def GetUserById(request, user_id, use_cache=True):
   """Returns user record (dict)"""
   handler = DetermineHandlerModule(request)
   
   #TODO(g): This needs to be configurable, so we can specify where to get authentication information...
-  user = handler.GetUserById(request, user_id)
+  user = handler.GetUserById(request, user_id, use_cache=use_cache)
   
   return user
 

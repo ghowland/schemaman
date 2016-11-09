@@ -6,6 +6,8 @@ import schemaman.datasource as datasource
 import schemaman.utility as utility
 from schemaman.utility.log import Log
 
+import schemaman.datasource.cache as cache
+
 from query import *
 
 
@@ -155,11 +157,17 @@ def ImportData(request, drop_first=False, transaction=False):
   pass
 
 
-def GetUser(request, username=None):
+def GetUser(request, username=None, use_cache=True):
   """Returns user.id (int)"""
   # We allow an explicit username, but otherwise use the requester's username
   if not username:
     username = request.username
+  
+  # If we want to use the cache, and we have this is cache, return it
+  if use_cache:
+    user = cache.Get('user_by_name', username)
+    if user != cache.NoCacheResultFound:
+      return user
   
   # Get a connection
   connection = GetConnection(request)
@@ -172,13 +180,23 @@ def GetUser(request, username=None):
   
   user = result[0]
 
+  # Save this is cache
+  cache.Set('user_by_name', username, user)
+  cache.Set('user_by_id', user['id'], user)
+
   return user
 
 
-def GetUserById(request, user_id):
+def GetUserById(request, user_id, use_cache=True):
   """Returns user record (dict)"""
   # Get a connection
   connection = GetConnection(request)
+  
+  # If we want to use the cache, and we have this is cache, return it
+  if use_cache:
+    user = cache.Get('user_by_id', user_id)
+    if user != cache.NoCacheResultFound:
+      return user
   
   #TODO(g): Need to specify the schema (DB) too, otherwise this is wrong...  Get from the request datasource info?  We populated, so we should know how it works...
   sql = "SELECT * FROM `user` WHERE id = %s"
@@ -188,11 +206,20 @@ def GetUserById(request, user_id):
   
   user = result[0]
 
+  # Save this is cache
+  cache.Set('user_by_name', user['name'], user)
+  cache.Set('user_by_id', user['id'], user)
+  
   return user
 
 
 def GetInfoSchema(request):
   """Returns the record for this schema data (schema)"""
+  # Get this cached result, and return it if available
+  cache_result = cache.Get('schema', request.connection_data['datasource']['database'])
+  if cache_result != cache.NoCacheResultFound:
+    return cache_result
+
   # Get a connection
   connection = GetConnection(request)
   
@@ -206,24 +233,32 @@ def GetInfoSchema(request):
   
   schema = result_schema[0]
   
+  # Set this cache result
+  cache.Set('schema', request.connection_data['datasource']['database'], schema)
+  
   return schema
 
 
 def GetInfoSchemaTable(request, schema, table, filter_key='name'):
   """Returns the record for this schema table data (schema_table)"""
+  # Get this cached result, and return it if available
+  cache_result = cache.Get('schema_table__%s' % filter_key, (schema['id'], table))
+  if cache_result != cache.NoCacheResultFound:
+    return cache_result
+
   # Get a connection
   connection = GetConnection(request)
-  
-  # Get the schema name from our request.datasource.database
-  database_name = request.connection_data['datasource']['database']
   
   #TODO(g): Need to specify the schema (DB) too, otherwise this is wrong...  Get from the request datasource info?  We populated, so we should know how it works...
   sql = "SELECT * FROM `schema_table` WHERE schema_id = %%s AND %s = %%s" % filter_key
   result_schema_table = connection.Query(sql, [schema['id'], table])
   if not result_schema_table:
-    raise Exception('Unknown schema_table: %s: %s' % (database_name, table))
+    raise Exception('Unknown schema_table: %s: %s' % (request.connection_data['datasource']['database'], table))
   
   schema_table = result_schema_table[0]
+  
+  # Save the cache result
+  cache.Set('schema_table__%s' % filter_key, (schema['id'], table), schema_table)
   
   return schema_table
 
@@ -233,9 +268,17 @@ def GetInfoSchemaAndTable(request, table_name):
   
   This is a helper function, calls GetInfoSchema() and GetInfoSchemaTable()
   """
+  # Get this cached result, and return it if available
+  cache_result = cache.Get('schema_and_table', (request.connection_data['datasource']['database'], table_name))
+  if cache_result != cache.NoCacheResultFound:
+    return cache_result
+
   schema = GetInfoSchema(request)
   
   schema_table = GetInfoSchemaTable(request, schema, table_name)
+  
+  # Save the cache result
+  cache.Get('schema_and_table', (request.connection_data['datasource']['database'], table_name), (schema, schema_table))
   
   return (schema, schema_table)
 
@@ -260,7 +303,7 @@ def GetInfoSchemaTableField(request, schema_table, name):
   sql = "SELECT * FROM `schema_table_field` WHERE schema_table_id = %s AND name = %s"
   result_schema_table_field = connection.Query(sql, [schema['id'], table])
   if not result_schema_table_field:
-    raise Exception('Unknown schema_table_field: %s: %s: %s' % (database_name, table, name))
+    raise Exception('Unknown schema_table_field: %s: %s: %s' % (request.connection_data['datasource']['database'], table, name))
   
   schema_table = result_schema_table_field[0]
   
