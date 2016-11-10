@@ -1230,7 +1230,6 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
 
 
   # If we have specified an explicit version number, get it and see if it 
-  #TODO(g): Allow using version numbers too  
   if version_number:
     (version_record, is_pending) = GetInfoVersionNumber(request, version_number)
     update_version = utility.path.LoadYamlFromString(version_record['data_yaml'], {})
