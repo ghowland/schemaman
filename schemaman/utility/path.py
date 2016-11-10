@@ -51,15 +51,26 @@ def SaveYaml(path, data):
   yaml.safe_dump(data, open(path, 'w'))
 
 
-def LoadYamlFromString(text):
+def LoadYamlFromString(text, default_value=None, strict=False):
   """Loads YAML data from a string
   
   Returns: any data container type storable in YAML, or None
   """
+  # None is never a failure, its just the default value
   if text == None:
-    return None
+    return default_value
   
-  result = yaml.load(StringIO.StringIO(text))
+  # If we are not strict, we will handle all exceptions as setting default value
+  if not strict:
+    try:
+      result = yaml.load(StringIO.StringIO(text))
+    
+    except Exception, e:
+      result = default_value
+  
+  # Else, we will raise exceptions as normal.  Separate else section so stack trace is from the failure point, and not hidden
+  else:
+      result = yaml.load(StringIO.StringIO(text))
   
   return result
 

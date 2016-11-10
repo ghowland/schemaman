@@ -1217,12 +1217,30 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
   rows = connection.Query(sql, values)
   
   
-  # If we want to use the working version
+  # Assume we have no version data
+  (update_version, delete_version) = (None, None)
+  
+  # If we want to use the working version, and we havent specified a version number (we dont want to mix both, too confusing.  Version Number is more explicit, it wins)
   #TODO(g): Move this section to generic_handler.py, because it can be generalized to all DB Handlers.
-  if use_working_version:
+  if use_working_version and version_number == None:
     # Get the working version data for this user
-    (working_version, delete_version) = GetWorkingVersionData(request)
+    (update_version, delete_version) = GetWorkingVersionData(request)
     
+    # print 'Version Record: Working: %s: \nUpdate: %s\nDelete: %s\n' % (is_pending, update_version, delete_version)
+
+
+  # If we have specified an explicit version number, get it and see if it 
+  #TODO(g): Allow using version numbers too  
+  if version_number:
+    (version_record, is_pending) = GetInfoVersionNumber(request, version_number)
+    update_version = utility.path.LoadYamlFromString(version_record['data_yaml'], {})
+    delete_version = utility.path.LoadYamlFromString(version_record['delete_data_yaml'], {})
+    
+    print 'Version Record: Pending: %s: \nUpdate: %s\nDelete: %s\n' % (is_pending, update_version, delete_version)
+  
+  
+  # If we have either update or deletes, from working, pending or committed versions.  We handle them all the same way.
+  if update_version or delete_version:
     (schema, schema_table) = GetInfoSchemaAndTable(request, table)
     
     # Ensure rows is a list (mutable)
@@ -1230,11 +1248,11 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
       rows = list(rows)
     
     # Look to see if we have an Updates from our Working Version data, to make changes to the rows
-    if schema['id'] in working_version:
-      working_schema = working_version[schema['id']]
+    if schema['id'] in update_version:
+      update_schema = update_version[schema['id']]
       
-      if schema_table['id'] in working_schema:
-        working_table = working_schema[schema_table['id']]
+      if schema_table['id'] in update_schema:
+        update_table = update_schema[schema_table['id']]
         
         # Get a list of all the row IDs, so we can see if we need to add any
         row_id_list = []
@@ -1244,12 +1262,12 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
           # Add the row ID, so we know them all
           row_id_list.append(row['id'])
           
-          # If the row we got from Filter() exists in our working_table, update those contents over the row
-          if row['id'] in working_table:
-            row.update(working_table[row['id']])
+          # If the row we got from Filter() exists in our update_table, update those contents over the row
+          if row['id'] in update_table:
+            row.update(update_table[row['id']])
         
-        # Loop over the working_table, and see if we have any entries we dont have in the rows, but that meet the requirement
-        for (item_key, item) in working_table.items():
+        # Loop over the update_table, and see if we have any entries we dont have in the rows, but that meet the requirement
+        for (item_key, item) in update_table.items():
           # Set the ID field.  We remove it when putting it into the working table, because it doesnt change, so we have to add it back when creating records from that that table
           item['id'] = item_key
           
@@ -1308,12 +1326,26 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
           rows.remove(row)
 
 
-  #TODO(g): Allow using version numbers too  
-  if version_number:
-    raise Exception('Trying to use a Version Number with a Filter() is Not Yet Implemented')
 
-  
   return rows
+
+
+def GetInfoVersionNumber(request, version_number):
+  """Returns the version_* record information, for the specified version_number.
+  
+  First checks in version_pending, then checks version_commit.  It will only be in one or the other.
+  
+  Returns: tuple (dict (or None), boolean), if found, the (record, is_pending), else (None, is_pending)
+  """
+  record = Get(request, 'version_pending', version_number)
+  is_pending = True
+  
+  # If it wasn't in pending, get it in committed (if it exists)
+  if record == None:
+    record = Get(request, 'version_commit', version_number)
+    is_pending = False
+  
+  return (record, is_pending)
 
 
 def GetWorkingVersionData(request, username=None):
