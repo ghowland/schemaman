@@ -848,7 +848,7 @@ def DeleteVersion(request, table, record_id, version_number=None):
     ReleaseLock(request, lock)
 
 
-def DeleteFilter(request, table, data, version_number=None, use_working_version=True):
+def DeleteFilter(request, table, data, version_number=None, use_working_version=False):
   """Delete 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables', which makes it a
@@ -860,7 +860,7 @@ def DeleteFilter(request, table, data, version_number=None, use_working_version=
   """
   handler = DetermineHandlerModule(request)
   
-  if version_number == None and use_working_version == None:
+  if version_number == None and use_working_version == False:
     result = handler.DeleteFilter(request, table, data)
     
   else:
