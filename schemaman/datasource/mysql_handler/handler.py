@@ -313,7 +313,7 @@ def GetInfoSchemaTableField(request, schema_table, name):
 def RecordVersionsAvailable(request, table, record_id, user=None):
   """List all of the historical and currently available versions available for this record.
   
-  Looks at 3 tables to figure this out: version_changelist_log (un-commited changes),
+  Looks at 3 tables to figure this out: version_pending_log (un-commited changes),
       version_commit_log (commited changes), version_working (single user changes)
   
   Args:
@@ -334,12 +334,12 @@ def RecordVersionsAvailable(request, table, record_id, user=None):
   # Get the schema and table info
   (schema, schema_table) = GetInfoSchemaAndTable(request, table)  
   
-  # version_changelist_log
-  sql = "SELECT * FROM `version_changelist_log` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s ORDER BY id"
+  # version_pending_log
+  sql = "SELECT * FROM `version_pending_log` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s ORDER BY id"
   result_changelist = connection.Query(sql, [schema['id'], schema_table['id'], record_id])
   
   # version_commit_log
-  sql = "SELECT * FROM `version_changelist_log` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s ORDER BY id"
+  sql = "SELECT * FROM `version_commit_log` WHERE schema_id = %s AND schema_table_id = %s AND record_id = %s ORDER BY id"
   result_commit = connection.Query(sql, [schema['id'], schema_table['id'], record_id])
   
   # version_working
@@ -384,7 +384,7 @@ def CommitWorkingVersion(request):
   """
   working_version = GetUserVersionWorkingRecord(request)
   
-  # Make a single record entry in the version_changelist table, do all the work as we normally would (increments the PKEY, etc)
+  # Make a single record entry in the version_pending table, do all the work as we normally would (increments the PKEY, etc)
   version_number = CreateChangeList(request, working_version)
   
   # "commit" the changelist into version_commit, which will also put the data into the direct DB tables
@@ -418,7 +418,7 @@ def CommitWorkingVersionSingleRecord(request, table, record_id):
   wrapped_record = None
   pass
   
-  # Make a single record entry in the version_changelist table, do all the work as we normally would (increments the PKEY, etc)
+  # Make a single record entry in the version_pending table, do all the work as we normally would (increments the PKEY, etc)
   version_number = CreateChangeList(request, wrapped_record)
   
   # "commit" the changelist into version_commit, which will also put the data into the direct DB tables
@@ -431,20 +431,20 @@ def CommitWorkingVersionSingleRecord(request, table, record_id):
 
 
 def CommitChangeList(request, version_number):
-  """Commit a pending change list (version_changelist) to the final data, and put in version_commit.
+  """Commit a pending change list (version_pending) to the final data, and put in version_commit.
   
-  Also updates version_changelist_log (removes entries), and version_commit_log (adds entries).
+  Also updates version_pending_log (removes entries), and version_commit_log (adds entries).
   
   This function works as a single datasbase transaction, so it cannot leave the data in an inconsistent state.
   
   Args:
     request: Request Object, the connection spec data and user and auth info, etc
-    version_number: int, this is the version number in the version_changelist.id
+    version_number: int, this is the version number in the version_pending.id
   
   Returns: None
   """
   # Get the specified change list record
-  record = Get(request, 'version_changelist', version_number, use_working_version=False)
+  record = Get(request, 'version_pending', version_number, use_working_version=False)
   
   # Create the new commit record to be inserted
   data = {'user_id':request.user['id'], 'data_yaml':record['data_yaml']}
@@ -455,11 +455,11 @@ def CommitChangeList(request, version_number):
   # Create the commit_log data
   CreateVersionLogRecords(request, 'version_commit', version_commit_id, data, commit=False)
   
-  # Remove the version_changelist_log row
-  DeleteFilter(request, 'version_changelist_log', {'version_changelist_id':version_number}, commit=False)
+  # Remove the version_pending_log row
+  DeleteFilter(request, 'version_pending_log', {'version_pending_id':version_number}, commit=False)
   
-  # Remove the version_changelist row
-  Delete(request, 'version_changelist', record['id'], commit=False)
+  # Remove the version_pending row
+  Delete(request, 'version_pending', record['id'], commit=False)
   
   # Make the change to the tables that are effected
   __CommitVersionRecordToDatasource(request, version_commit_id, record, commit=False)
@@ -476,7 +476,7 @@ def __CommitVersionRecordToDatasource(request, version_commit_id, change_record,
   
   Args:
     request: Request Object, the connection spec data and user and auth info, etc
-    version_number: int, this is the version number in the version_changelist.id
+    version_number: int, this is the version number in the version_pending.id
     change_record: dict, `version_commit` table row data
     commit: boolean (default True), if True any queries that could be commited will be (single query transaction), if False then a later Commit() will be required
   
@@ -484,6 +484,11 @@ def __CommitVersionRecordToDatasource(request, version_commit_id, change_record,
   """
   # Parse the YAML for our cahnge data
   change = utility.path.LoadYamlFromString(change_record['data_yaml'])
+  
+  
+  #TODO(g): This is where we need to convert negatives into positives, and find dependencies...
+  pass
+  
   
   # Set all of these records into their appropriate tables
   # Process all the schema table fields we need version logs for
@@ -567,11 +572,11 @@ def CreateChangeList(request, data):
   # Create the changelist record
   record = {'user_id':request.user['id'], 'data_yaml':data['data_yaml']}
   
-  # Create this version changelist, and get the version number
-  version_number = SetDirect(request, 'version_changelist', record)
+  # Create this version pending change, and get the version number
+  version_number = SetDirect(request, 'version_pending', record)
   
-  # Create the version log for this changelist
-  CreateVersionLogRecords(request, 'version_changelist', version_number, record)
+  # Create the version log for this pending change
+  CreateVersionLogRecords(request, 'version_pending', version_number, record)
   
   return version_number
 
@@ -807,19 +812,19 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
     version_table = 'version_working'
 
   
-  # Else, there is a version_number, so work with the version_changelist record
+  # Else, there is a version_number, so work with the version_pending record
   else:
     # Get the current working record for this user (if  any)
     #NOTE(g):SECURITY: Im not forcing that only the owner can write these here.  Is that wrong?  Should I?  I think there should be a different authorization phase...
-    sql = "SELECT * FROM version_changelist WHERE id = %s"
+    sql = "SELECT * FROM version_pending WHERE id = %s"
     result = connection.Query(sql, [version_number])
     
     # Fail if we cant find this record
     if not result:
-      raise Exception('The pending changelist was not found: %s' % version_number)
+      raise Exception('The pending change was not found: %s' % version_number)
     
     # Which table are we working with?  We have a version number, so it's changelist
-    version_table = 'version_changelist'
+    version_table = 'version_pending'
   
   
   
