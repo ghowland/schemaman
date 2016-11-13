@@ -3,6 +3,9 @@ Perform general actions against data for SchemaMan
 
 We need to have short cuts to do things on our data, because we repeat access patterns too frequently in code.
 These are things like looping over nested data inside of dictionaries, and ensuring nested dictinary elements exist, etc.
+
+TODO(g):
+  - Multiple iterations in a single for loop.  Go down multiple keys, and assign all the variables each time, like it has been flattened.  This will remove a lot of lines of code where I'm iterating over schema/table/records
 """
 
 

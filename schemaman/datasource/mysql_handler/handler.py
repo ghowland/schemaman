@@ -492,17 +492,9 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
   rollback_data = utility.path.LoadYamlFromString(change_record['rollback_data_yaml'], {})
   
   
-  #TODO(g): This is where we need to convert negatives into positives, and find dependencies...
-  pass
-  
-  
-  # Create dependencies, perfectly.  Dont try sorting trickery, just loop until we find no deps, or we find deps, defer them until all deps are covered.  It will be fast, these never get even to be 100s of entries, which is still TINY for this work
-  
   # Get all our items as a flat dict of our changes, as it's easier to iterate over
   update_items = data_control.NestedDictsToSingleDict(update_data, 3)
   
-  # Deletes cant be new or negative, they must exist, or we couldnt delete them, so these dont have to be checked for dependencies...
-  # delete_items = data_control.NestedDictsToSingleDict(delete_data, 3)
   
   # Track dependencies here
   dependencies = {}
@@ -562,18 +554,18 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
             
             # Save what we want to collect once we are ready to be inserted, later (after our required records are inserted)
             dependency_update[record_key][field] = {'table': table_name, 'value': field_value}
-            print 'Recording lookup for later: %s: %s: %s: %s' % (record_key, field, table_name, field_value)
+            # print 'Recording lookup for later: %s: %s: %s: %s' % (record_key, field, table_name, field_value)
           
           # Else, this dependency hasnt been found yet, so keep looking for more dependent fields
           else:
             # This is a dependent field
             field_dependencies[table_name] = field_value
-            print 'Found dependent field: %s: %s: %s: %s' % (record_key, field, table_name, field_value)
+            # print 'Found dependent field: %s: %s: %s: %s' % (record_key, field, table_name, field_value)
       
       
       # If we dont have any field dependencies, then we can be removed from the deferred items, as we are set
       if not field_dependencies:
-        print 'No dependencies, so removing: %s' % str(record_key)
+        # print 'No dependencies, so removing: %s' % str(record_key)
         del deferred_items[record_key]
         
         # We modified the deferred items, so change has occurred
@@ -583,9 +575,9 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
         sorted_items.append(record_key)
   
   
-  print '\n\n::: Dependencies:\n%s\n\n' % pprint.pformat(dependencies)
-  print '\n\n::: Dependency Updates:\n%s\n\n' % pprint.pformat(dependency_update)
-  print '\n\n::: Sorted Items:\n%s\n\n' % pprint.pformat(sorted_items)
+  # print '\n\n::: Dependencies:\n%s\n\n' % pprint.pformat(dependencies)
+  # print '\n\n::: Dependency Updates:\n%s\n\n' % pprint.pformat(dependency_update)
+  # print '\n\n::: Sorted Items:\n%s\n\n' % pprint.pformat(sorted_items)
   
   # If we had a circular reference, we still have deferred items, but we couldnt change anything in a pass, so we are stuck
   if not change_occurred and deferred_items:
@@ -602,8 +594,6 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
     real_record = Get(request, schema_table['name'], record['id'])
     data_control.EnsureNestedDictsExist(rollback_data, [schema_id, schema_table_id, record_id], real_record)
     
-    print 'BEFORE: Record Field Update: %s: %s' % (schema_table['name'], record)
-    
     # If this is a New Record (id<0), remove the 'id' field, as we will auto_increment it into existance and uet the updated_record_id from that
     if record.get('id', 0) < 0:
       del record['id']
@@ -614,26 +604,39 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
         # Get our dependency record_key, we have to look it up
         dependency_record_key = dependencies[field_data['table']][field_data['value']]
         
-        print '\nUpdating Field: %s: %s: %s ==> %s\n' % (record_key, field, field_data['value'], dependency_results[dependency_record_key])
-        
         # Get our updated value
         record[field] = dependency_results[dependency_record_key]
     
-    print 'AFTER:  Record Field Update: %s: %s' % (schema_table['name'], record)
-    
-    # Directly save this into table it was intended to be in
-    print '\nTODO: Set Direct: %s: %s\n' % (schema_table['name'], record)
-    updated_record_id = SetDirect(request, schema_table['name'], record, commit=commit)
+    # Directly save this into table it was intended to be in.  Update it's own ID, so we convert New Records into existing ones
+    # print '\nTODO: Set Direct: %s: %s\n' % (schema_table['name'], record)
+    record['id'] = SetDirect(request, schema_table['name'], record, commit=commit)
     
     # Save all the updated record IDs here, if we need them, we will come and get them
-    dependency_results[record_key] = updated_record_id
+    dependency_results[record_key] = record['id']
+    
+    # Put this record back into the update_data section, so that we keep the updated IDs, if they have been
+    update_data[schema_id][schema_table_id][record_id] = record
   
-  
-  print '\n\n::: Roll Back data:\n%s\n\n' % pprint.pformat(rollback_data)
   
   # Delete the specified records as well
-  #TODO(g):...
-  pass
+  for (schema_id, schema_data) in delete_data.items():
+    for (schema_table_id, schema_table_data) in schema_data.items():
+      (schema, schema_table) = GetInfoSchemaAndTableById(request, schema_table_id)
+      
+      for record_id in schema_table_data:
+        # Get the existing record, so we can store it for rollback
+        real_record = Get(request, schema_table['name'], record_id)
+        data_control.EnsureNestedDictsExist(rollback_data, [schema_id, schema_table_id, record_id], real_record)
+        
+        # Delete the Real record
+        Delete(request, schema_table['name'], record_id)
+
+  print '\n\n::: Roll Back data:\n%s\n\n' % pprint.pformat(rollback_data)
+  
+  # Save the updated version_commit results back into the DB, with our rollback data and any updated fields from dependencies
+  change_record['data_yaml'] = utility.path.DumpYamlAsString(update_data)
+  change_record['rollback_data_yaml'] = utility.path.DumpYamlAsString(rollback_data)
+  SetDirect(request, 'version_commit', change_record)
 
 
 def CreateVersionLogRecords(request, version_table, version_id, data, commit=True):
