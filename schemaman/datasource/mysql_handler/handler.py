@@ -506,10 +506,14 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
   
   # Track dependencies here
   dependencies = {}
+  dependency_results = {}
   dependency_update = {}
   
   # We start out with deferred items being everything, then we remove them, as possible, and loop until they are clear
-  deferred_items = update_items
+  deferred_items = dict(update_items)
+  
+  # Create sorted record_keys list, we know these as they clear their dependencies, so automatically sorted
+  sorted_items = []
   
   # We will keep looping until we either have no deferred items, or we couldnt find any more dependencies (circular references)
   change_occurred = True
@@ -558,59 +562,74 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
             
             # Save what we want to collect once we are ready to be inserted, later (after our required records are inserted)
             dependency_update[record_key][field] = {'table': table_name, 'value': field_value}
+            print 'Recording lookup for later: %s: %s: %s: %s' % (record_key, field, table_name, field_value)
           
           # Else, this dependency hasnt been found yet, so keep looking for more dependent fields
           else:
             # This is a dependent field
             field_dependencies[table_name] = field_value
+            print 'Found dependent field: %s: %s: %s: %s' % (record_key, field, table_name, field_value)
+      
       
       # If we dont have any field dependencies, then we can be removed from the deferred items, as we are set
       if not field_dependencies:
+        print 'No dependencies, so removing: %s' % str(record_key)
         del deferred_items[record_key]
+        
+        # We modified the deferred items, so change has occurred
+        change_occurred = True
+        
+        # We can sort these items on the order they clear being deferred, this guarantees we know their dependencies already, so is perfect
+        sorted_items.append(record_key)
   
   
   print '\n\n::: Dependencies:\n%s\n\n' % pprint.pformat(dependencies)
-  print '\n\n::: Dependencie Updates:\n%s\n\n' % pprint.pformat(dependency_update)
+  print '\n\n::: Dependency Updates:\n%s\n\n' % pprint.pformat(dependency_update)
+  print '\n\n::: Sorted Items:\n%s\n\n' % pprint.pformat(sorted_items)
   
   # If we had a circular reference, we still have deferred items, but we couldnt change anything in a pass, so we are stuck
   if not change_occurred and deferred_items:
     raise Exception('Circular reference found in deferred items, could not create dependency list: %s' % deferred_items)
 
+  
+  # Process all our sorted items, which takes care of getting dependencies when needed
+  for record_key in sorted_items:
+    (schema_id, schema_table_id, record_id) = record_key
+    (schema, schema_table) = GetInfoSchemaAndTableById(request, schema_table_id)
+    record = update_items[record_key]
 
-  # Create sorted record_keys list from the dependencies.  Then we just iterate over the list, and do each one, and update the negative numbers as we go
-  pass
-  
-  
-  raise Exception('TBD, blocking progress here until we know all the information is correct')
-  
-  
-  # Set all of these records into their appropriate tables
-  # Process all the schema table fields we need version logs for
-  for (schema_id, schema_tables) in update_data.items():
+    # Rollback: Get the real record, this is None if it doesnt exist, which is also what we want.  It works for the positive and the negative existance cases.
+    real_record = Get(request, schema_table['name'], record['id'])
+    data_control.EnsureNestedDictsExist(rollback_data, [schema_id, schema_table_id, record_id], real_record)
     
-    Log('Commit Change To Datasource: %s : %s' % (schema_id, schema_tables))
+    print 'BEFORE: Record Field Update: %s: %s' % (schema_table['name'], record)
     
-    for (schema_table_id, records) in schema_tables.items():
-      for (record_id, record) in records.items():
-        (schema, schema_table) = GetInfoSchemaAndTableById(request, schema_table_id)
+    # If this is a New Record (id<0), remove the 'id' field, as we will auto_increment it into existance and uet the updated_record_id from that
+    if record.get('id', 0) < 0:
+      del record['id']
+    
+    # If this record requires any updates
+    if record_key in dependency_update:
+      for (field, field_data) in dependency_update[record_key].items():
+        # Get our dependency record_key, we have to look it up
+        dependency_record_key = dependencies[field_data['table']][field_data['value']]
         
-        # If this is a new, store our rollback entry as None, since its new
-        if 'id' not in record and record['id'] < 0:
-          # Insert this record into the rollback data, and set it to None since it's a new record
-          data_control.EnsureNestedDictsExist(rollback_data, [schema_id, schema_table_id, record_id], None)
+        print '\nUpdating Field: %s: %s: %s ==> %s\n' % (record_key, field, field_data['value'], dependency_results[dependency_record_key])
         
-        else:
-          # Get the real record
-          real_record = Get(request, schema_table['name'], record['id'])
-          
-          # Insert this real record into the rollback data, so we can roll back to it
-          data_control.EnsureNestedDictsExist(rollback_data, [schema_id, schema_table_id, record_id], real_record)
-          
-        # Get the current record, so we can store it in the rollback
-        
-        # Directly save this into table it was intended to be in
-        # SetDirect(request, schema_table['name'], record, commit=commit)
+        # Get our updated value
+        record[field] = dependency_results[dependency_record_key]
+    
+    print 'AFTER:  Record Field Update: %s: %s' % (schema_table['name'], record)
+    
+    # Directly save this into table it was intended to be in
+    print '\nTODO: Set Direct: %s: %s\n' % (schema_table['name'], record)
+    updated_record_id = SetDirect(request, schema_table['name'], record, commit=commit)
+    
+    # Save all the updated record IDs here, if we need them, we will come and get them
+    dependency_results[record_key] = updated_record_id
   
+  
+  print '\n\n::: Roll Back data:\n%s\n\n' % pprint.pformat(rollback_data)
   
   # Delete the specified records as well
   #TODO(g):...
