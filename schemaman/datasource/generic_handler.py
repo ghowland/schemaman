@@ -869,6 +869,15 @@ def DeleteFilter(request, table, data, version_number=None, use_working_version=
   return result
 
 
+def CommitVersionRecordToDatasource(request, version_commit_id, change_record, commit=True):
+  """Pushes the contents of a version_commit row into the Real data source"""
+  handler = DetermineHandlerModule(request)
+  
+  result = handler.CommitVersionRecordToDatasource(request, version_commit_id, change_record, commit=commit)
+  
+  return result
+
+
 def CleanEmptyVersionData(version_data):
   """Cleans up any empty dicts or lists in the version_work data_yaml field data."""
   schema_keys = version_data.keys()

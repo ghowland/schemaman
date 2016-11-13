@@ -2,6 +2,8 @@
 Handle all SchemaMan datasource specific functions: MySQL
 """
 
+import pprint
+
 import schemaman.datasource as datasource
 import schemaman.utility as utility
 from schemaman.utility.log import Log
@@ -463,13 +465,13 @@ def CommitChangeList(request, version_number):
   Delete(request, 'version_pending', record['id'], commit=False)
   
   # Make the change to the tables that are effected
-  _CommitVersionRecordToDatasource(request, version_commit_id, record, commit=False)
+  CommitVersionRecordToDatasource(request, version_commit_id, record, commit=False)
   
   # Commit the request
   Commit(request)
 
 
-def _CommitVersionRecordToDatasource(request, version_commit_id, change_record, commit=True):
+def CommitVersionRecordToDatasource(request, version_commit_id, change_record, commit=True):
   """Commit a change from the version_commit table into the real (non-versioning) datasource tables.
   
   This should not be called from outside this library, mostly because there is no reason to and it
@@ -496,17 +498,87 @@ def _CommitVersionRecordToDatasource(request, version_commit_id, change_record, 
   
   # Create dependencies, perfectly.  Dont try sorting trickery, just loop until we find no deps, or we find deps, defer them until all deps are covered.  It will be fast, these never get even to be 100s of entries, which is still TINY for this work
   
-  deferred_items = []
-  
   # Get all our items as a flat dict of our changes, as it's easier to iterate over
   update_items = data_control.NestedDictsToSingleDict(update_data, 3)
-  delete_items = data_control.NestedDictsToSingleDict(delete_data, 3)
+  
+  # Deletes cant be new or negative, they must exist, or we couldnt delete them, so these dont have to be checked for dependencies...
+  # delete_items = data_control.NestedDictsToSingleDict(delete_data, 3)
+  
+  # Track dependencies here
+  dependencies = {}
+  dependency_update = {}
+  
+  # We start out with deferred items being everything, then we remove them, as possible, and loop until they are clear
+  deferred_items = update_items
+  
+  # We will keep looping until we either have no deferred items, or we couldnt find any more dependencies (circular references)
+  change_occurred = True
+  while deferred_items and change_occurred:
+    # This must be set to True each time, or we will not loop again, and if there are still deferred items, we will error
+    change_occurred = False
+    
+    # Loop over our update_items and create a dependency structure
+    deferred_keys = deferred_items.keys()
+    for record_key in deferred_keys:
+      (schema_id, schema_table_id, record_id) = record_key
+      (schema, schema_table) = GetInfoSchemaAndTableById(request, schema_table_id)
+      record_data = deferred_items[record_key]
+      
+      # If we are a new record (id<0), add ourselves to the dependencies dict
+      if record_data.get('id', 0) < 0:
+        if schema_table['name'] not in dependencies:
+          dependencies[schema_table['name']] = {}
+        
+        # Create our entry in the dependencies, so we can be easily referenced against fields of dependent records
+        dependencies[schema_table['name']][record_data['id']] = record_key
+      
+      
+      # Test the fields for dependencies first
+      field_dependencies = {}
+      
+      # Check if this has any field dependencies
+      for (field, field_value) in record_data.items():
+        if field.endswith('_id') and type(field_value) == int and field_value < 0:
+          # Get the table name (potentially), by stripping off the '_id' characters
+          table_name = field[:-3]
+          
+          # Ensure this is actually a table name we know about
+          try:
+            # If this doesnt throw an exception, this is a real table name, and so this is a join table, and we should add it as a dependency
+            GetInfoSchemaAndTable(request, table_name)
+          except Exception, e:
+            # This is not a table name, so we dont need to track it as a dependency, skip this field
+            continue
+          
+          # Check to see if we already have the dependency we need listed
+          if table_name in dependencies and field_value in dependencies[table_name]:
+            # If we already have it, do nothing.  We will see this doesnt have any dependent fields (if it doesnt), and remove it from the deferred queue after this block
+            if record_key not in dependency_update:
+              dependency_update[record_key] = {}
+            
+            # Save what we want to collect once we are ready to be inserted, later (after our required records are inserted)
+            dependency_update[record_key][field] = {'table': table_name, 'value': field_value}
+          
+          # Else, this dependency hasnt been found yet, so keep looking for more dependent fields
+          else:
+            # This is a dependent field
+            field_dependencies[table_name] = field_value
+      
+      # If we dont have any field dependencies, then we can be removed from the deferred items, as we are set
+      if not field_dependencies:
+        del deferred_items[record_key]
   
   
-  # Determine which of these are totally new items (.id < 0), mark what they will be converting to, as thats how we are filling in our negatives
+  print '\n\n::: Dependencies:\n%s\n\n' % pprint.pformat(dependencies)
+  print '\n\n::: Dependencie Updates:\n%s\n\n' % pprint.pformat(dependency_update)
   
-  # Determine which fields need to be filled with these negative numbers
-  
+  # If we had a circular reference, we still have deferred items, but we couldnt change anything in a pass, so we are stuck
+  if not change_occurred and deferred_items:
+    raise Exception('Circular reference found in deferred items, could not create dependency list: %s' % deferred_items)
+
+
+  # Create sorted record_keys list from the dependencies.  Then we just iterate over the list, and do each one, and update the negative numbers as we go
+  pass
   
   
   raise Exception('TBD, blocking progress here until we know all the information is correct')
