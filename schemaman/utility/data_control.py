@@ -87,3 +87,20 @@ def NestedDictsToSingleDict(container, nested_depth, key_list=None, depth=0, fin
   
   return final_data
 
+
+def GetFromNestedDict(container, key_list, default_value=None):
+  """Returns the value at the nested dict starting from container, going down each layer using the key_list"""
+  current_container = container
+  
+  # Process all our keys
+  for key in key_list:
+    # If we dont have this key, return the default
+    if key not in current_container:
+      return default_value
+    
+    # Update the current container by moving into this key
+    current_container = current_container[key]
+  
+  # If we are at the end of our key_list, this is the value we were looking for, whatever it is
+  return current_container
+

@@ -1191,7 +1191,12 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
     # Get the schema and table info
     (schema, schema_table) = GetInfoSchemaAndTable(request, table)
     
-    record_data = utility.path.LoadYamlFromString(version_record['data_yaml'])
+    rollback_record_data = utility.path.LoadYamlFromString(version_record['rollback_data_yaml'], {})
+    update_record_data = utility.path.LoadYamlFromString(version_record['data_yaml'], {})
+    
+    # Layer the rollback data (if any), underneath the update data
+    record_data = rollback_record_data
+    record_data.update(update_record_data)
     
     #TODO(g): Also handle deletes
     pass
