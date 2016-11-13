@@ -5,6 +5,7 @@ Handle all SchemaMan datasource specific functions: MySQL
 import schemaman.datasource as datasource
 import schemaman.utility as utility
 from schemaman.utility.log import Log
+import schemaman.utility.data_control as data_control
 
 import schemaman.datasource.cache as cache
 
@@ -462,13 +463,13 @@ def CommitChangeList(request, version_number):
   Delete(request, 'version_pending', record['id'], commit=False)
   
   # Make the change to the tables that are effected
-  __CommitVersionRecordToDatasource(request, version_commit_id, record, commit=False)
+  _CommitVersionRecordToDatasource(request, version_commit_id, record, commit=False)
   
   # Commit the request
   Commit(request)
 
 
-def __CommitVersionRecordToDatasource(request, version_commit_id, change_record, commit=True):
+def _CommitVersionRecordToDatasource(request, version_commit_id, change_record, commit=True):
   """Commit a change from the version_commit table into the real (non-versioning) datasource tables.
   
   This should not be called from outside this library, mostly because there is no reason to and it
@@ -483,16 +484,37 @@ def __CommitVersionRecordToDatasource(request, version_commit_id, change_record,
   Returns: None
   """
   # Parse the YAML for our cahnge data
-  change = utility.path.LoadYamlFromString(change_record['data_yaml'])
+  update_data = utility.path.LoadYamlFromString(change_record['data_yaml'], {})
+  delete_data = utility.path.LoadYamlFromString(change_record['delete_data_yaml'], {})
+  admin_data = utility.path.LoadYamlFromString(change_record['admin_data_yaml'], {})
+  rollback_data = utility.path.LoadYamlFromString(change_record['rollback_data_yaml'], {})
   
   
   #TODO(g): This is where we need to convert negatives into positives, and find dependencies...
   pass
   
   
+  # Create dependencies, perfectly.  Dont try sorting trickery, just loop until we find no deps, or we find deps, defer them until all deps are covered.  It will be fast, these never get even to be 100s of entries, which is still TINY for this work
+  
+  deferred_items = []
+  
+  # Get all our items as a flat dict of our changes, as it's easier to iterate over
+  update_items = data_control.NestedDictsToSingleDict(update_data, 3)
+  delete_items = data_control.NestedDictsToSingleDict(delete_data, 3)
+  
+  
+  # Determine which of these are totally new items (.id < 0), mark what they will be converting to, as thats how we are filling in our negatives
+  
+  # Determine which fields need to be filled with these negative numbers
+  
+  
+  
+  raise Exception('TBD, blocking progress here until we know all the information is correct')
+  
+  
   # Set all of these records into their appropriate tables
   # Process all the schema table fields we need version logs for
-  for (schema_id, schema_tables) in change.items():
+  for (schema_id, schema_tables) in update_data.items():
     
     Log('Commit Change To Datasource: %s : %s' % (schema_id, schema_tables))
     
@@ -500,8 +522,27 @@ def __CommitVersionRecordToDatasource(request, version_commit_id, change_record,
       for (record_id, record) in records.items():
         (schema, schema_table) = GetInfoSchemaAndTableById(request, schema_table_id)
         
+        # If this is a new, store our rollback entry as None, since its new
+        if 'id' not in record and record['id'] < 0:
+          # Insert this record into the rollback data, and set it to None since it's a new record
+          data_control.EnsureNestedDictsExist(rollback_data, [schema_id, schema_table_id, record_id], None)
+        
+        else:
+          # Get the real record
+          real_record = Get(request, schema_table['name'], record['id'])
+          
+          # Insert this real record into the rollback data, so we can roll back to it
+          data_control.EnsureNestedDictsExist(rollback_data, [schema_id, schema_table_id, record_id], real_record)
+          
+        # Get the current record, so we can store it in the rollback
+        
         # Directly save this into table it was intended to be in
-        SetDirect(request, schema_table['name'], record, commit=commit)
+        # SetDirect(request, schema_table['name'], record, commit=commit)
+  
+  
+  # Delete the specified records as well
+  #TODO(g):...
+  pass
 
 
 def CreateVersionLogRecords(request, version_table, version_id, data, commit=True):
