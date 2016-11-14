@@ -590,13 +590,13 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
     (schema, schema_table) = GetInfoSchemaAndTableById(request, schema_table_id)
     record = update_items[record_key]
 
-    # Rollback: Get the real record, this is None if it doesnt exist, which is also what we want.  It works for the positive and the negative existance cases.
-    real_record = Get(request, schema_table['name'], record_id)
-    data_control.EnsureNestedDictsExist(rollback_data, [schema_id, schema_table_id, record_id], real_record)
-    
     # If this is a New Record (id<0), remove the 'id' field, as we will auto_increment it into existance and uet the updated_record_id from that
     if record.get('id', 0) < 0:
       del record['id']
+    
+    # Rollback: Get the real record, this is None if it doesnt exist, which is also what we want.  It works for the positive and the negative existance cases.
+    real_record = Get(request, schema_table['name'], record_id)
+    data_control.EnsureNestedDictsExist(rollback_data, [schema_id, schema_table_id, record_id], real_record)
     
     # If this record requires any updates
     if record_key in dependency_update:
@@ -606,6 +606,12 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
         
         # Get our updated value
         record[field] = dependency_results[dependency_record_key]
+    
+    # If we got a real record, then overly our changes onto it, so we can save them properly
+    if real_record:
+      new_record = dict(real_record)
+      new_record.update(record)
+      record = new_record
     
     # Directly save this into table it was intended to be in.  Update it's own ID, so we convert New Records into existing ones
     # print '\nTODO: Set Direct: %s: %s\n' % (schema_table['name'], record)
