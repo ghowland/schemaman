@@ -591,7 +591,7 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
     record = update_items[record_key]
 
     # Rollback: Get the real record, this is None if it doesnt exist, which is also what we want.  It works for the positive and the negative existance cases.
-    real_record = Get(request, schema_table['name'], record['id'])
+    real_record = Get(request, schema_table['name'], record_id)
     data_control.EnsureNestedDictsExist(rollback_data, [schema_id, schema_table_id, record_id], real_record)
     
     # If this is a New Record (id<0), remove the 'id' field, as we will auto_increment it into existance and uet the updated_record_id from that
