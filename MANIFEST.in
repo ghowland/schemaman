@@ -1,1 +1,3 @@
 recursive-include schemaman *.py
+include LICENSE
+include README.md
