@@ -604,11 +604,38 @@ def GetWorkingVersionData(request, username=None):
   Args:
     request: Request Object, the connection spec data and user and auth info, etc
   
-  Returns: dict or None
+  Returns: tuple of (dict, list), with labels (update_data, delete_data) 
   """
   handler = DetermineHandlerModule(request)
 
   result = handler.GetWorkingVersionData(request, username=username)
+  
+  return result
+
+
+def GetWorkingVersionRecord(request, schema_id, schema_table_id, record_id, default_value=None, username=None):
+  """Returns the Working Version record (usually dict), but we are not enforcing data types here.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    schema_id: int, schema.id
+    schema_table_id: int, schema_table.id
+    record_id: int, The record primary key `id` for the specified working version record
+    default_value: any, will normally be None or passed in as {}
+    username: string, optional, username to get Working Version for
+  
+  Returns: any, default_value if record does not existing in Working Version
+  """
+  (update_data, delete_data) = GetWorkingVersionData(request, username=username)
+  
+  # Assume our default_value, if we cannot find something better
+  result = default_value
+  
+  # If we have this item in our working version data, then set it as our result value (overiding the default_value)
+  if schema_id in update_data:
+    if schema_table_id in update_data[schema_id]:
+      if record_id in update_data[schema_id][schema_table_id]:
+        result = update_data[schema_id][schema_table_id][record_id]
   
   return result
 
