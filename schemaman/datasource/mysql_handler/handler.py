@@ -1108,13 +1108,20 @@ def SetDirect(request, table, data, noop=False, update_returns_id=True, debug=SQ
   
   # Query.  Will return a row_id (int) for INSERT, and None for Update
   if not noop:
+    print sql
     result = connection.Query(sql, values, commit=commit)
     
     # If we did an Update, we really want the 'id' field returned, like INSERT does (consistency and not having to do this all the time after an update)
     if result == 0 and update_returns_id:
-      # This should always return a single dict in a list, due to our uniqueness constraints
-      rows = Filter(request, table, data)
-      result = rows[0]['id']
+      # If we have a primary 'id' key, use that
+      if 'id' in data:
+        result = Get(request, table, data['id'])
+      
+      # Else, use all the fields to get it explicitly
+      else:
+        # This should always return a single dict in a list, due to our uniqueness constraints
+        rows = Filter(request, table, data)
+        result = rows[0]['id']
     
   else:
     Log('Query not run, noop = True')
