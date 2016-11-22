@@ -640,6 +640,35 @@ def GetWorkingVersionRecord(request, schema_id, schema_table_id, record_id, defa
   return result
 
 
+def SetWorkingVersionRecord(request, schema_id, schema_table_id, record_id, value):
+  """Returns the Working Version record (usually dict), but we are not enforcing data types here.
+  
+  Args:
+    request: Request Object, the connection spec data and user and auth info, etc
+    schema_id: int, schema.id
+    schema_table_id: int, schema_table.id
+    record_id: int, The record primary key `id` for the specified working version record
+    value: dict
+  
+  Returns: None
+  """
+  (update_data, delete_data) = GetWorkingVersionData(request)
+  
+  # Ensure the schema exists in our update data
+  if schema_id not in update_data:
+    update_data[schema_id] = {}
+  
+  # Ensure the schema table exists in our update data
+  if schema_table_id not in update_data[schema_id]:
+    update_data[schema_id][schema_table_id] = {}
+  
+  # Set the record into the data
+  update_data[schema_id][schema_table_id][record_id] = value
+  
+  # Save this data back into the working version data
+  SetWorkingVersionData(request, update_data)
+
+
 def SetWorkingVersionData(request, working_version, delete_version=None):
   """Returns a dict or None, with the current working data (already parsed from `version_working.data_yaml`
   
