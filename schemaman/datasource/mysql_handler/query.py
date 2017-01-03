@@ -199,57 +199,59 @@ class Connection:
 
   def Query(self, sql, params=None, commit=True):
     """Query the database via our connection."""
-    if self.is_single_threaded:
-      SINGLE_THREADED_LOCK.acquire()
-      
-    
-    set_request_lock = False
-    if self.request:
-      # Ensure any requests we look at, have a lock we can grab
-      if self.request.request_number not in REQUEST_QUERY_LOCK:
-        REQUEST_QUERY_LOCK[self.request.request_number] = threading.Lock()
-      
-      # Get the lock
-      REQUEST_QUERY_LOCK[self.request.request_number].acquire()
-      set_request_lock = True
-    
-    
     try:
-      done = False
-      retry = 0
-      
-      while not done:
-        try:
-          if not params:
-            Log('Query: %s' % sql)
-          else:
-            Log('Query: %s -- %s' % (sql, params))
-          
-          result = Query(self.connection, self.cursor, sql, params=params, commit=commit)
-          done = True
+      if self.is_single_threaded:
+        SINGLE_THREADED_LOCK.acquire()
         
-        # Handle DB connection problems
-        except MySQLdb.OperationalError, e:
-          print 'MySQL: OperationError: %s' % e
-          
-          retry += 1
-          if retry >= 3:
-            raise Exception('Failed %s times: %s' % (retry-1, e))
-          
-          # Else, reconnect, something went wrong, this is the best way to fix it
-          else:
-            self.Connect()
-            
-    
-    finally:
-      # If we set a request lock, release it
-      if set_request_lock:
-        try:
-          REQUEST_QUERY_LOCK[self.request.request_number].release()
-        except Exception, e:
-          pass
       
-      # If we are single threaded, release the lock
+      set_request_lock = False
+      if self.request:
+        # Ensure any requests we look at, have a lock we can grab
+        if self.request.request_number not in REQUEST_QUERY_LOCK:
+          REQUEST_QUERY_LOCK[self.request.request_number] = threading.Lock()
+        
+        # Get the lock
+        REQUEST_QUERY_LOCK[self.request.request_number].acquire()
+        set_request_lock = True
+      
+      
+      try:
+        done = False
+        retry = 0
+        
+        while not done:
+          try:
+            if not params:
+              Log('Query: %s' % sql)
+            else:
+              Log('Query: %s -- %s' % (sql, params))
+            
+            result = Query(self.connection, self.cursor, sql, params=params, commit=commit)
+            done = True
+          
+          # Handle DB connection problems
+          except MySQLdb.OperationalError, e:
+            print 'MySQL: OperationError: %s' % e
+            
+            retry += 1
+            if retry >= 3:
+              raise Exception('Failed %s times: %s' % (retry-1, e))
+            
+            # Else, reconnect, something went wrong, this is the best way to fix it
+            else:
+              self.Connect()
+              
+      
+      finally:
+        # If we set a request lock, release it
+        if set_request_lock:
+          try:
+            REQUEST_QUERY_LOCK[self.request.request_number].release()
+          except Exception, e:
+            pass
+    
+    # If we are single threaded, release the lock
+    finally:
       if self.is_single_threaded:
         SINGLE_THREADED_LOCK.release()
     
