@@ -37,16 +37,23 @@ DEFAULT_CHARSET = 'latin1'
 REQUEST_QUERY_LOCK = {}
 
 
+# Do we force all queries to hold a mutex for querying?  If our library has thread saftey issue (crashes), we need this turned on
+# SINGLE_THREADED_DEFAULT = False
+SINGLE_THREADED_DEFAULT = True
+SINGLE_THREADED_LOCK = threading.Lock()
+
+
 #TODO(g): Make this a base class, that each Handler type sub-classes.  Useful in this case, as it's an interface, and some methods are more virtual than others.  It's good to have a base class for the interface, otherwise every handler implements its own base, and they seem more disconnected...
 class Connection:
   """This wraps MySQL connection and cursor objects, as well as tracks the progress of any requests, and if it is available for use by a new request."""
   
-  def __init__(self, connection_data, server_id, request):
+  def __init__(self, connection_data, server_id, request, is_single_threaded=SINGLE_THREADED_DEFAULT):
     Log('Creating new connection: MySQL: %s' % connection_data['datasource']['database'])
     
     # We need these to actually connect
     self.connection_data = connection_data
     self.server_id = server_id
+    self.is_single_threaded = is_single_threaded
     
     # This tells us who is connection.  Release() to make this connection available for other requests.
     self.request = request
@@ -192,6 +199,10 @@ class Connection:
 
   def Query(self, sql, params=None, commit=True):
     """Query the database via our connection."""
+    if self.is_single_threaded:
+      SINGLE_THREADED_LOCK.acquire()
+      
+    
     set_request_lock = False
     if self.request:
       # Ensure any requests we look at, have a lock we can grab
@@ -201,7 +212,7 @@ class Connection:
       # Get the lock
       REQUEST_QUERY_LOCK[self.request.request_number].acquire()
       set_request_lock = True
-        
+    
     
     try:
       done = False
@@ -231,11 +242,16 @@ class Connection:
             
     
     finally:
+      # If we set a request lock, release it
       if set_request_lock:
         try:
           REQUEST_QUERY_LOCK[self.request.request_number].release()
         except Exception, e:
           pass
+      
+      # If we are single threaded, release the lock
+      if self.is_single_threaded:
+        SINGLE_THREADED_LOCK.release()
     
     return result
   
