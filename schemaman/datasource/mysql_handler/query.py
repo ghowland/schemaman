@@ -12,9 +12,9 @@ try:
   MYSQL = 'ORACLE'
   
 except ImportError, e:
-  import MySQLdb
-  import MySQLdb.cursors
-  MYSQL = 'GHETTO'
+  import pymysql
+  import pymysql.cursors
+  MYSQL = 'PUREPYTHON'
 
 from schemaman.utility.log import Log
 
@@ -34,12 +34,14 @@ DEFAULT_CHARSET = 'latin1'
 
 
 # For every request, they can only take 1 request at a time, so they dont collide, so we lock to ensure they are sequential
+REQUEST_LOCKING = True
+# REQUEST_LOCKING = False
 REQUEST_QUERY_LOCK = {}
 
 
 # Do we force all queries to hold a mutex for querying?  If our library has thread saftey issue (crashes), we need this turned on
-# SINGLE_THREADED_DEFAULT = False
-SINGLE_THREADED_DEFAULT = True
+SINGLE_THREADED_DEFAULT = False
+# SINGLE_THREADED_DEFAULT = True
 SINGLE_THREADED_LOCK = threading.Lock()
 
 
@@ -193,30 +195,66 @@ class Connection:
       self.cursor = self.connection.cursor(dictionary=True)
     
     else:
-      self.connection = MySQLdb.Connection(user=server['user'], passwd=password, host=server['host'], port=server['port'], db=server['database'])
-      self.cursor = self.connection.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+      self.connection = pymysql.Connection(user=server['user'], passwd=password, host=server['host'], port=server['port'], db=server['database'], cursorclass=pymysql.cursors.DictCursor)
+      self.cursor = self.connection.cursor()
+
+
+  def __QueryLock(self):
+    """Lock a query"""
+    set_request_lock = False
+    set_single_threaded_lock = False
+    
+    if self.is_single_threaded:
+      print 'Aquiring Single Thread Lock: Start'
+      SINGLE_THREADED_LOCK.acquire()
+      set_single_threaded_lock = True
+      print 'Aquiring Single Thread Lock: Success'
+      
+    
+    if REQUEST_LOCKING and self.request:
+      # Ensure any requests we look at, have a lock we can grab
+      if self.request.request_number not in REQUEST_QUERY_LOCK:
+        REQUEST_QUERY_LOCK[self.request.request_number] = threading.Lock()
+      
+      # Get the lock
+      print 'Aquiring Request Lock: Start'
+      REQUEST_QUERY_LOCK[self.request.request_number].acquire()
+      set_request_lock = True
+      print 'Aquiring Request Lock: Success'
+    
+    return (set_request_lock, set_single_threaded_lock)
+
+
+  def __QueryUnlock(self, set_request_lock, set_single_threaded_lock):
+    """Unlock a query"""
+    # print 'Release Query Locks'
+    
+    # If we set a request lock, release it
+    if set_request_lock:
+      # try:
+      print 'Releasing Request Lock: Start'
+      REQUEST_QUERY_LOCK[self.request.request_number].release()
+      print 'Releasing Request Lock: Success'
+      # except Exception, e:
+      #   pass
+    
+    # If we set the single threaded lock
+    if set_single_threaded_lock:
+      # try:
+      print 'Releasing Single Lock: Start'
+      SINGLE_THREADED_LOCK.release()
+      print 'Releasing Single Lock: Success'
+      # except Exception, e:
+      #   pass
 
 
   def Query(self, sql, params=None, commit=True):
     """Query the database via our connection."""
-    set_request_lock = False
-    set_single_threaded_lock = False
+    set_request_lock = None
+    set_single_threaded_lock = None
     
     try:
-      if self.is_single_threaded:
-        SINGLE_THREADED_LOCK.acquire()
-        set_single_threaded_lock = True
-        
-      
-      if self.request:
-        # Ensure any requests we look at, have a lock we can grab
-        if self.request.request_number not in REQUEST_QUERY_LOCK:
-          REQUEST_QUERY_LOCK[self.request.request_number] = threading.Lock()
-        
-        # Get the lock
-        REQUEST_QUERY_LOCK[self.request.request_number].acquire()
-        set_request_lock = True
-      
+      (set_request_lock, set_single_threaded_lock) = self.__QueryLock()
       
       done = False
       retry = 0
@@ -233,30 +271,24 @@ class Connection:
           done = True
         
         # Handle DB connection problems
-        except MySQLdb.OperationalError, e:
+        except pymysql.OperationalError, e:
           print 'MySQL: OperationError: %s' % e
           
           retry += 1
           if retry >= 3:
+            self.__QueryUnlock(set_request_lock, set_single_threaded_lock)
             raise Exception('Failed %s times: %s' % (retry-1, e))
           
           # Else, reconnect, something went wrong, this is the best way to fix it
           else:
+            self.__QueryUnlock(set_request_lock, set_single_threaded_lock)
             self.Connect()
       
     
     # If we are single threaded, release the lock
     finally:
-      # If we set a request lock, release it
-      if set_request_lock:
-        try:
-          REQUEST_QUERY_LOCK[self.request.request_number].release()
-        except Exception, e:
-          pass
-      
-      # If we set the single threaded lock
-      if set_single_threaded_lock:
-        SINGLE_THREADED_LOCK.release()
+      # If we got through the initial lock (it will be a bool, not None)
+      self.__QueryUnlock(set_request_lock, set_single_threaded_lock)
     
     return result
   
