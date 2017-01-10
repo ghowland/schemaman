@@ -1,5 +1,9 @@
 """
 Datasource: MySQL: Querying
+
+TODO:
+
+- auto_commit solves our flakiness problem between connections (switching around), but it seems to be a problem where we arent calling COMMIT, but we havent found this yet.  Troubleshoot later.  Will turn off auto_commit, and then try changing something, if it flips back and forth randomly over many changes, because its switching connections that were COMMITed, thats the problem.
 """
 
 
@@ -59,6 +63,7 @@ class Connection:
     
     # This tells us who is connection.  Release() to make this connection available for other requests.
     self.request = request
+    self.request_lock = threading.Lock()
     
     # Generate the server key, since this specifies which CONNECTION_POOL_POOL we are in
     self.server_key = GetServerKey(request)
@@ -72,6 +77,7 @@ class Connection:
   
   def __del__(self):
     try:
+      print 'Closing Connection: DEL: %s: %s' % (self, self.Close)
       self.Close()
     
     # Ignore this failure, this happens when the context is lost, because the program is closing, and we are working with NoneTypes, instead of expected types
@@ -81,7 +87,7 @@ class Connection:
 
   def Close(self):
     """Close the cursor and connection, if they are open, and set them to None"""
-    Log('Closing connection: MySQL: %s: %s' % (connection_data['datasource']['database'], self.server_key))
+    Log('Closing connection: MySQL: %s: %s' % (self.connection_data['datasource']['database'], self.server_key))
     
     if self.cursor:
       try:
@@ -92,7 +98,7 @@ class Connection:
     if self.connection:
       try:
         self.connection.close()
-      finally:      
+      finally:
         self.connection = None
 
 
@@ -100,17 +106,31 @@ class Connection:
     """Release this connection."""
     Log('Releasing connection: MySQL: %s: %s' % (self.server_key, self.request.username))
     
+    if self.request_lock.locked and self.request == None:
+      print '\n\nERROR: Request Connection was not locked, but had a request: %s' % self.request
+    
     self.request = None
+    
+    self.request_lock.release()
 
 
   def Acquire(self, request):
     """Acquire this Connection for this Request."""
-    if self.request != None:
-      raise Exception('Attempting to Acquire a Connection when it is already owned: %s' % request)
+    if self.request_lock.locked():
+      raise Exception('Attempting to Acquire a Connection when it is already locked: %s' % request)
     
-    Log('Acquiring connection: MySQL: %s: %s' % (self.server_key, request.username))
+    # Get the lock
+    self.request_lock.acquire()
     
+    Log('Acquiring connection: MySQL: %s: %s  (auto_commit=%s)' % (self.server_key, request.username, request.auto_commit))
     self.request = request
+    
+    # If any transactions werent committed, we obviously dont want them to be, or whatever, theyre gone!
+    self.connection.rollback()
+    
+    # Set the auto-commit based on the request specification
+    self.connection.autocommit(self.request.auto_commit)
+    
 
   
   def IsAvailable(self):
@@ -118,27 +138,15 @@ class Connection:
     
     NOTE(g): This does not verify the connection, just ensures that we think we have a valid connection.
     """
-    if self.request and self.connection:
-      # If this request has been released, we are done with it, and can be used
-      if self.request.is_released:
-        # Clear the request and let them know we are available
-        self.request = None
-        return True
-      
-      else:
-        return False
+    is_locked = self.request_lock.locked()
+    is_available = not is_locked
     
-    else:
-      return True
+    return is_available
   
 
   def IsInUse(self):
     """Returns boolean, True if not currently being used by a request."""
-    if self.request:
-      return True
-    
-    else:
-      return False
+    return not self.IsAvailable()
 
 
   def IsUsedByRequest(self, request):
@@ -205,10 +213,10 @@ class Connection:
     set_single_threaded_lock = False
     
     if self.is_single_threaded:
-      print 'Aquiring Single Thread Lock: Start'
+      # print 'Aquiring Single Thread Lock: Start'
       SINGLE_THREADED_LOCK.acquire()
       set_single_threaded_lock = True
-      print 'Aquiring Single Thread Lock: Success'
+      # print 'Aquiring Single Thread Lock: Success'
       
     
     if REQUEST_LOCKING and self.request:
@@ -217,10 +225,10 @@ class Connection:
         REQUEST_QUERY_LOCK[self.request.request_number] = threading.Lock()
       
       # Get the lock
-      print 'Aquiring Request Lock: Start'
+      # print 'Aquiring Request Lock: Start'
       REQUEST_QUERY_LOCK[self.request.request_number].acquire()
       set_request_lock = True
-      print 'Aquiring Request Lock: Success'
+      # print 'Aquiring Request Lock: Success'
     
     return (set_request_lock, set_single_threaded_lock)
 
@@ -232,18 +240,18 @@ class Connection:
     # If we set a request lock, release it
     if set_request_lock:
       # try:
-      print 'Releasing Request Lock: Start'
+      # print 'Releasing Request Lock: Start'
       REQUEST_QUERY_LOCK[self.request.request_number].release()
-      print 'Releasing Request Lock: Success'
+      # print 'Releasing Request Lock: Success'
       # except Exception, e:
       #   pass
     
     # If we set the single threaded lock
     if set_single_threaded_lock:
       # try:
-      print 'Releasing Single Lock: Start'
+      # print 'Releasing Single Lock: Start'
       SINGLE_THREADED_LOCK.release()
-      print 'Releasing Single Lock: Success'
+      # print 'Releasing Single Lock: Success'
       # except Exception, e:
       #   pass
 
@@ -371,14 +379,14 @@ def GetConnection(request, server_id=None):
     for connection in CONNECTION_POOL_POOL[server_key]:
       # If this connection is available (not being used in a request)
       if connection.IsAvailable():
-        #TODO(g): Make this a method to set it to this request
+        # This request has now acquired this connection
         connection.Acquire(request)
         return connection
 
   
   # Create the connection
   connection = Connection(request.connection_data, server_id, request)
-  
+  connection.Acquire(request)
   
   # Ensure we have a pool for this server in our connection pool pools
   if connection.server_key not in CONNECTION_POOL_POOL:

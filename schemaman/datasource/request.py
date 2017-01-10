@@ -15,6 +15,10 @@ GLOBAL_REQUEST_COUNTER = 1
 GLOBAL_REQUEST_COUNTER_LOCK = threading.Lock()
 
 
+# Defaults
+DEFAULT_AUTO_COMMIT = True
+
+
 class RequestInvalid(Exception):
   """This request is no longer valid."""
 
@@ -22,7 +26,7 @@ class RequestInvalid(Exception):
 class Request:
   """Contains request information, and can close transactions due to scope GC collections."""
   
-  def __init__(self, connection_data, username, authentication, request_number=None, server_id=None, use_version_management=True, auto_commit=False):
+  def __init__(self, connection_data, username, authentication, request_number=None, server_id=None, use_version_management=True, auto_commit=DEFAULT_AUTO_COMMIT):
     self.connection_data = connection_data
     
     if username == None:
