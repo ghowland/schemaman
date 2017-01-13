@@ -983,6 +983,7 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   else:
     record = {'user_id':request.user['id'], 'data_yaml':{}}
     change = {}
+    delete_change = {}
   
   
   # Get the primary key information for this table, and determine how to format our key
@@ -1016,7 +1017,7 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   
   # If we had an entry in the delete_change list for this record, remove that.  Any position change wipes out a delete, for obvious reasons.
   if schema['id'] in delete_change:
-   if schema_table['id'] in delete_change[schema['id']]:
+    if schema_table['id'] in delete_change[schema['id']]:
     
       # If we have this record's ID in our delete list, remove it
       if data['id'] in delete_change[schema['id']][schema_table['id']]:
