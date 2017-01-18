@@ -845,7 +845,14 @@ def DeleteVersion(request, table, record_id, version_number=None):
     AcquireLock(request, lock)
     
     # Get the current working version
-    version_working = Get(request, 'version_working', user['id'])
+    version_working_list = Filter(request, 'version_working', {'user_id': user['id']})
+    if version_working_list:
+      version_working = version_working_list[0]
+    
+    # No version working, we are done
+    else:
+      Log('Delete Version: %s: %s -- No version_working available for this user' % (table, record_id))
+      return
     
     # If we dont have a working version, make new dicts to store data in
     update_data = {}

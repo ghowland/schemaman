@@ -1542,12 +1542,13 @@ def GetWorkingVersionData(request, username=None):
   user_list = Filter(request, 'user', {'name':username})
   
   if not user_list:
-    return ({}, [])
+    return ({}, {})
   
   try:
     user = user_list[0]
     
-    version_working = Get(request, 'version_working', user['id'])
+    version_working_list = Filter(request, 'version_working', {'user_id': user['id']})
+    version_working = version_working_list[0]
     
     update_version = utility.path.LoadYamlFromString(version_working['data_yaml'])
     delete_version = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
@@ -1556,13 +1557,13 @@ def GetWorkingVersionData(request, username=None):
     if update_version == None:
       update_version = {}
     if delete_version == None:
-      delete_version = []
+      delete_version = {}
     
     return (update_version, delete_version)
   
   except Exception, e:
     print 'GetWorkingVersionData: Failed: %s: %s' % (username, e)
-    return ({}, [])
+    return ({}, {})
 
 
 def SetWorkingVersionData(request, working_version, delete_version=None):
