@@ -575,7 +575,7 @@ def Query(request, sql, params=None):
   return result
 
 
-def Filter(request, table, data=None, use_working_version=False, order_list=None, groupby_list=None, version_number=None):
+def Filter(request, table, data=None, use_working_version=False, order_list=None, groupby_list=None, order_ascending=True, version_number=None, limit=None, row_offset=None):
   """Get 0 or more records from the datasource, based on filtering rules.
   
   Can be a 'view', combining several lower level 'tables'.
@@ -593,7 +593,8 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
   """
   handler = DetermineHandlerModule(request)
 
-  result = handler.Filter(request, table, data=data, order_list=order_list, groupby_list=groupby_list, version_number=version_number, use_working_version=use_working_version)
+  result = handler.Filter(request, table, data=data, use_working_version=use_working_version, order_list=order_list, groupby_list=groupby_list,
+                          order_ascending=order_ascending, version_number=version_number, limit=limit, row_offset=row_offset)
   
   return result
 

@@ -1288,7 +1288,7 @@ def Query(request, sql, params=None):
   return result
 
 
-def Filter(request, table, data=None, use_working_version=False, order_list=None, groupby_list=None, version_number=None):
+def Filter(request, table, data=None, use_working_version=False, order_list=None, groupby_list=None, order_ascending=True, version_number=None, limit=None, row_offset=None):
   """Get 0 or more records from the datasource, based on filtering rules.  Works against a single table.
   """
   
@@ -1309,6 +1309,10 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
   # Order By
   if order_list:
     order_by = ' ORDER BY %s' % ', '.join(order_list)
+    if order_ascending:
+      order_by += ' ASC'
+    else:
+      order_by += ' DESC'
   else:
     order_by = ''
   
@@ -1330,7 +1334,7 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
     keys_ticked.append(ticked_key)
     
     # If this is a normal value.  All non-normal tests should be wrapped in tuple (not other sequences) for the proper magic to occur.
-    if type(data[keys[count]]) != tuple:
+    if type(data[keys[count]]) not in (tuple, list):
       # Update keys will reference the insert keys, so we dont have to specify the data twice (SQL does it)
       #TODO(g): Should I remove the primary key from this?  Not sure it's necessary.  Remove comment when proven it works without removing it (simpler)...
       where_list.append('%s = %%s' % ticked_key)
@@ -1351,6 +1355,13 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
         # Set the full statement here, which means we have to handle quoting the strings ourselves, if VARCHAR-like type
         where_list.append('%s IN %s' % (ticked_key, where_in_str))
 
+      # If the field is 'IS' a list of values
+      elif data[keys[count]][0].upper() == 'IS':
+        # Just join all the terms: IS NULL, IS NOT NULL, IS IN, IS NOT IN, it doesnt matter as they all work out
+        where_in_str = ' '.join(data[keys[count]])
+        where_list.append('%s %s' % (ticked_key, where_in_str))
+
+        
       else:
         raise Exception('Filter: Unknown WHERE directive: %s' % data[keys[count]])
   
@@ -1365,6 +1376,15 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
   # Else, get all the records
   else:
     sql = "SELECT * FROM `%s` %s %s" % (table, order_by, group_by)
+  
+  
+  # If limit rows
+  if limit:
+    # If we have a row offset, allow that too
+    if row_offset:
+      sql  += ' LIMIT %s,%s' % (row_offset, row_offset + limit)
+    else:
+      sql  += ' LIMIT %s' % limit
   
   # Log('\n\nGetFromData: %s: %s\nSQL:%s\nValues:%s\n' % (table, data, sql, values))
   
