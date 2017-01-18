@@ -890,7 +890,7 @@ def AbandonCommit(request):
   connection.AbandonCommit()
 
 
-def Set(request, table, data, version_management=True, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
+def Set(request, table, data, version_management=False, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
   """Put (insert/update) data into this datasource.
   
   Args:
@@ -909,11 +909,11 @@ def Set(request, table, data, version_management=True, commit_version=False, ver
   """
   # If we are directly working with database tales
   if not version_management:
-    SetDirect(request, table, data, noop=noop, update_returns_id=update_returns_id, debug=debug, commit=commit)
+    return SetDirect(request, table, data, noop=noop, update_returns_id=update_returns_id, debug=debug, commit=commit)
   
   # Else, this work should be in the version_* tables
   else:
-    SetVersion(request, table, data, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug)
+    return SetVersion(request, table, data, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug)
 
 
 def SetVersion(request, table, data, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG):
