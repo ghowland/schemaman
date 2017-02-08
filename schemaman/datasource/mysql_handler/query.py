@@ -125,8 +125,11 @@ class Connection:
     Log('Acquiring connection: MySQL: %s: %s  (auto_commit=%s)' % (self.server_key, request.username, request.auto_commit))
     self.request = request
     
-    # If any transactions werent committed, we obviously dont want them to be, or whatever, theyre gone!
-    self.connection.rollback()
+    try:
+      # If any transactions werent committed, we obviously dont want them to be, or whatever, theyre gone!
+      self.connection.rollback()
+    except pymysql.OperationalError, e:
+      self.Connect()
     
     # Set the auto-commit based on the request specification
     self.connection.autocommit(self.request.auto_commit)
