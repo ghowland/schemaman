@@ -81,7 +81,7 @@ class Connection:
       self.Close()
     
     # Ignore this failure, this happens when the context is lost, because the program is closing, and we are working with NoneTypes, instead of expected types
-    except (Type, AttributeError), e:
+    except (TypeError, AttributeError), e:
       pass
 
 
