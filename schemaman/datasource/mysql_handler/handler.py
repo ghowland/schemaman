@@ -1454,10 +1454,29 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
             
             # print 'Found potential match: %s' % item
             
+            #TODO(t): this shouldn't live right here-- as I imagine we'll need to call this from multiple places
+            def check_filter(item, filter_key, filter_value):
+              """Return whether the item's filter_key matches the value definition of filter_value
+              """
+              if filter_key not in item:
+                return False
+              # If this is just a normal value, then we just need to compare
+              if type(filter_value) not in (tuple, list):
+                return item[filter_key] == filter_value
+              else:
+                # If the field is 'IN' a list of values
+                if filter_value[0].upper() == 'IN':
+                  match_list = filter_value[1]
+                  return item[filter_key] in match_list
+                else:
+                  #TODO(t): this should implement the other checks (such as IS)
+                  raise NotImplementedError('Filter does not support filter_value of %s' % filter_value)
+              return True
+            
             # Check if any of the filter key-values dont match, we only want to add it if they all match
             filter_data_matched = True
             for (filter_key, filter_value) in data.items():
-              if filter_key not in item or item[filter_key] != filter_value:
+              if not check_filter(item, filter_key, filter_value):
                 filter_data_matched = False
                 # print '  Not matched: %s != %s' % (item.get(filter_key, '*KEY NOT FOUND*'), filter_value)
                 break
