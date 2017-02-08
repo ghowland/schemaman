@@ -1350,7 +1350,7 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
       # If the field is 'IN' a list of values
       if data[keys[count]][0].upper() == 'IN':
         match_list = data[keys[count]][1]
-        where_in_str = '(%s)' % ', '.join(match_list)
+        where_in_str = '(%s)' % ', '.join(str(x) for x in match_list)
 
         # Set the full statement here, which means we have to handle quoting the strings ourselves, if VARCHAR-like type
         where_list.append('%s IN %s' % (ticked_key, where_in_str))
