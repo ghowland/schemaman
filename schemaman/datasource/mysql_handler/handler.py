@@ -541,10 +541,19 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
           # Ensure this is actually a table name we know about
           try:
             # If this doesnt throw an exception, this is a real table name, and so this is a join table, and we should add it as a dependency
-            GetInfoSchemaAndTable(request, table_name)
+            field_schema, field_schema_table = GetInfoSchemaAndTable(request, table_name)
           except Exception, e:
             # This is not a table name, so we dont need to track it as a dependency, skip this field
             continue
+          
+          #TODO(t): this should really look at foreign keys (or the equivalent)-- but we'll do this for now
+          # Loop over all remaining keys, if the table we are referencing is in the remaining list we 
+          # cannot go now, so we'll add the field dep
+          for k in deferred_keys:
+            if k == record_key:
+              continue
+            if field_schema['id'] == schema_id and k[1] == field_schema_table['id']:
+              field_dependencies[table_name] = field_value
           
           # Check to see if we already have the dependency we need listed
           if table_name in dependencies and field_value in dependencies[table_name]:
@@ -556,12 +565,6 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
             dependency_update[record_key][field] = {'table': table_name, 'value': field_value}
             # print 'Recording lookup for later: %s: %s: %s: %s' % (record_key, field, table_name, field_value)
           
-          # Else, this dependency hasnt been found yet, so keep looking for more dependent fields
-          else:
-            # This is a dependent field
-            field_dependencies[table_name] = field_value
-            # print 'Found dependent field: %s: %s: %s: %s' % (record_key, field, table_name, field_value)
-      
       
       # If we dont have any field dependencies, then we can be removed from the deferred items, as we are set
       if not field_dependencies:
