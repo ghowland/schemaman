@@ -1308,7 +1308,7 @@ def Filter(request, table, data=None, use_working_version=False, order_list=None
   
   # Order By
   if order_list:
-    order_by = ' ORDER BY %s' % ', '.join(order_list)
+    order_by = ' ORDER BY %s' % ', '.join(('`'+item+'`' for item in order_list))
     if order_ascending:
       order_by += ' ASC'
     else:
