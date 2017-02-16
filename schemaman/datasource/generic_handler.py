@@ -512,6 +512,15 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
   print '\n\nSet UDN Records:\n%s\n' % pprint.pformat(records)
   print '\nSet UDN Delete Records:\n%s\n\n' % pprint.pformat(delete_records)
   
+  if use_working_version:
+    user = GetUser(request)
+    #TODO(t): inner method to do this?
+    version_working_list = Filter(request, 'version_working', {'user_id': user['id']})
+    if version_working_list:
+      version_working = version_working_list[0]
+    else:
+      version_working = {'data_yaml': '', 'delete_data_yaml': ''}
+  
   # Set our data items
   for (record_key, record) in records.items():
     # Get the table from the record key.  We dont need the record_id, that is just for uniqueness in the key.  Set*() takes the key from the 'id' field
@@ -523,15 +532,13 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
     else:
       SetVersion(request, table, record, version_number=version_number)
   
-  
   # Delete our specified data items
   for (table, record_id) in delete_records:
     if not use_working_version:
       Delete(request, table, record_id)
       
     else:
-      DeleteVersion(request, table, record_id, version_number=version_number)
-
+      DeleteVersion(request, table, record_id, version_number=version_number, version_working=version_working)
 
 def Get(request, table, record_id, version_number=None, use_working_version=True):
   """Get (select single record) from this datasource.
@@ -817,7 +824,7 @@ def Delete(request, table, record_id):
   return result
 
 
-def DeleteVersion(request, table, record_id, version_number=None):
+def DeleteVersion(request, table, record_id, version_number=None, version_working=None):
   """Delete a single record from Working Version or a Pending Commit.
   
   Args:
@@ -845,14 +852,15 @@ def DeleteVersion(request, table, record_id, version_number=None):
     AcquireLock(request, lock)
     
     # Get the current working version
-    version_working_list = Filter(request, 'version_working', {'user_id': user['id']})
-    if version_working_list:
-      version_working = version_working_list[0]
-    
-    # No version working, we are done
-    else:
-      Log('Delete Version: %s: %s -- No version_working available for this user' % (table, record_id))
-      return
+    if version_working is None:
+      version_working_list = Filter(request, 'version_working', {'user_id': user['id']})
+      if version_working_list:
+        version_working = version_working_list[0]
+      
+      # No version working, we are done
+      else:
+        Log('Delete Version: %s: %s -- No version_working available for this user' % (table, record_id))
+        return
     
     # If we dont have a working version, make new dicts to store data in
     update_data = {}
