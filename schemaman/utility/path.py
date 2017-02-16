@@ -7,7 +7,6 @@ Standard operations are wrapped here to be shorter and also to provide a place t
 
 import yaml
 import collections
-import StringIO
 
 try:
     from yaml import CDumper as Dumper
@@ -65,14 +64,14 @@ def LoadYamlFromString(text, default_value=None, strict=False):
   # If we are not strict, we will handle all exceptions as setting default value
   if not strict:
     try:
-      result = yaml.load(StringIO.StringIO(text), Loader=Loader)
+      result = yaml.load(text, Loader=Loader)
     
     except Exception, e:
       result = default_value
   
   # Else, we will raise exceptions as normal.  Separate else section so stack trace is from the failure point, and not hidden
   else:
-      result = yaml.load(StringIO.StringIO(text), Loader=Loader)
+      result = yaml.load(text, Loader=Loader)
   
   return result
 
