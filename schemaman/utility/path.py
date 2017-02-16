@@ -11,8 +11,10 @@ import StringIO
 
 try:
     from yaml import CDumper as Dumper
+    from yaml import CLoader as Loader
 except ImportError:
     from yaml import Dumper as Dumper
+    from yaml import Loader as Loader
 
 
 # Key is file path, this is to store YAML decoded data, for performance
@@ -41,14 +43,14 @@ def LoadYaml(path, use_cache=True):
   global DATA_CACHE
   
   if not use_cache or path not in DATA_CACHE:
-    DATA_CACHE[path] = yaml.load(open(path))
+    DATA_CACHE[path] = yaml.load(open(path), Loader=Loader)
   
   return DATA_CACHE[path]
 
 
 def SaveYaml(path, data):
   """Save data in YAML format."""
-  yaml.safe_dump(data, open(path, 'w'))
+  yaml.dump(data, open(path, 'w'), Dumper=SafeDumper)
 
 
 def LoadYamlFromString(text, default_value=None, strict=False):
@@ -63,14 +65,14 @@ def LoadYamlFromString(text, default_value=None, strict=False):
   # If we are not strict, we will handle all exceptions as setting default value
   if not strict:
     try:
-      result = yaml.load(StringIO.StringIO(text))
+      result = yaml.load(StringIO.StringIO(text), Loader=Loader)
     
     except Exception, e:
       result = default_value
   
   # Else, we will raise exceptions as normal.  Separate else section so stack trace is from the failure point, and not hidden
   else:
-      result = yaml.load(StringIO.StringIO(text))
+      result = yaml.load(StringIO.StringIO(text), Loader=Loader)
   
   return result
 
