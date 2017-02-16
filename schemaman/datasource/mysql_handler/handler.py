@@ -1035,9 +1035,11 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
     for (real_key, real_value) in real_record.items():
       # If our change data has this key
       if real_key in change_table[data_key]:
+        #NOTE(t) converting everything to a string because mysql stores it all as strings anyways-- and people might be inserting an int into
+        # a varchar field (for example) -- and we don't want it to show as a diff
         # If the key is the same value as the Real record value, then we dont need it versioned, because it hasnt changed, and it isnt the 'id' key
         #   Also, delete if the real value is NULL, and we have an empty string (no change)
-        if real_value == change_table[data_key][real_key] or (real_value == None and change_table[data_key][real_key] == ''):
+        if str(real_value) == str(change_table[data_key][real_key]) or (real_value == None and change_table[data_key][real_key] == ''):
           del change_table[data_key][real_key]
 
 
