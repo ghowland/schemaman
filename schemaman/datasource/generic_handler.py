@@ -422,7 +422,7 @@ def SetDirect(request, table, data, commit=True):
   return result
 
 
-def SetVersion(request, table, data, commit_version=False, version_number=None):
+def SetVersion(request, table, data, commit_version=False, version_number=None, version_working=None):
   """Put (insert/update) data into this datasource's Version Management tables (working, unless version_number is specified).
   
   This is the same as Set() except version_managament=True, which is more explicit.  This should be easier to read and type,
@@ -439,12 +439,118 @@ def SetVersion(request, table, data, commit_version=False, version_number=None):
   
   Returns: int or None, if creating a new record this returns the newly created record primary key (ex: `id`), otherwise None
   """
-  handler = DetermineHandlerModule(request)
+  Log('Set Version: %s: %s' % (table, data))
   
-  result = handler.SetVersion(request, table, data, commit_version=commit_version, version_number=version_number)
+  (schema, schema_table) = GetInfoSchemaAndTable(request, table)
   
-  return result
+  user = GetUser(request)
+  
+  if version_number:
+    version_table = 'version_pending'
+  else:
+    version_table = 'version_working'
+  
+  #TODO(t): implement locking? Its hard since this is new stuff :/
+  ## Get the lock key for this schema table row
+  #lock = GetSchemaTableRowLockKey(request, table, record_id, schema=schema)
+  
+  # Get the current working version
+  if version_working is None:
+    # If version_working wasn't passed in, lets get it
+    if version_number:
+      version_working_list = Get(request, 'version_pending', version_number)
+    else:
+      version_working_list = Filter(request, 'version_working', {'user_id': user['id']})
+    if version_working_list:
+        version_working = version_working_list[0]
+    else:
+      if version_number:
+        raise Exception('Unable to get version data for version=%s' % version_number)
+  
+  if not version_working:
+    version_working = {'user_id':request.user['id'], 'data_yaml':{}}
+  
+  # If we dont have a working version, make new dicts to store data in
+  change = {}
+  delete_change = {}
+  
+  # If, we have a working version, so get the data
+  if version_working:
+    change = utility.path.LoadYamlFromString(version_working['data_yaml'])
+    delete_change = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
+    
+    if not change:
+      change = {}
+    
+    if not delete_change:
+      delete_change = {}
+  
 
+  # Format record key
+  #TODO(g): Do this properly with the above dynamic PKEY info
+  data_key = data['id']
+  
+  # Add this set data to the version change record, if it doesnt exist
+  if schema['id'] not in change:
+    change[schema['id']] = {}
+  
+  # Add this table to the change record, if it doesnt exist
+  if schema_table['id'] not in change[schema['id']]:
+    change[schema['id']][schema_table['id']] = {}
+  
+  # Readability variable
+  change_table = change[schema['id']][schema_table['id']]
+  
+  print '\n\nSetting data in table: %s: %s: %s\nChange Table: %s\nData: %s\n\n' % (schema['id'], schema_table['id'], data_key, change_table, data)
+  
+  # Add this specific record, or update it if it already exists
+  if data_key in change_table:
+    change_table[data_key].update(data)
+  else:
+    change_table[data_key] = data
+  
+  print '\nAfter Setting Data: %s\n\n' % change_table
+
+  
+  # If we had an entry in the delete_change list for this record, remove that.  Any position change wipes out a delete, for obvious reasons.
+  if schema['id'] in delete_change:
+    if schema_table['id'] in delete_change[schema['id']]:
+    
+      # If we have this record's ID in our delete list, remove it
+      if data['id'] in delete_change[schema['id']][schema_table['id']]:
+        delete_change[schema['id']][schema_table['id']].remove(data['id'])
+ 
+
+  # Get the Real record (if it exists), so we only store fields that are different.  If all fields are the same, we store nothing
+  real_record = Get(request, table, data['id'], use_working_version=False)
+  
+  # If we have a Real record, then remove any matching fields
+  if real_record:
+    for (real_key, real_value) in real_record.items():
+      # If our change data has this key
+      if real_key in change_table[data_key]:
+        #NOTE(t) converting everything to a string because mysql stores it all as strings anyways-- and people might be inserting an int into
+        # a varchar field (for example) -- and we don't want it to show as a diff
+        # If the key is the same value as the Real record value, then we dont need it versioned, because it hasnt changed, and it isnt the 'id' key
+        #   Also, delete if the real value is NULL, and we have an empty string (no change)
+        if str(real_value) == str(change_table[data_key][real_key]) or (real_value == None and change_table[data_key][real_key] == ''):
+          del change_table[data_key][real_key]
+
+
+  # Clean up any unused data structures, so we dont have a bunch of junk hanging around
+  CleanEmptyVersionData(change)
+  CleanEmptyVersionData(delete_change)
+
+  
+  # Put this change record back into the version_change table, so it's saved
+  version_working['data_yaml'] = utility.path.DumpYamlAsString(change)
+  version_working['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_change)
+    
+  # Save the change version_working
+  result_record = SetDirect(request, version_table, version_working)
+  
+  return result_record
+  
 
 def SetFromUdnDict(request, data, version_number=None, use_working_version=True):
   """Set data from a dictionary with UDN keys (Universion Dotted Notation: 'table_name.row_id.field_name')
@@ -530,7 +636,7 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
       Set(request, table, record)
       
     else:
-      SetVersion(request, table, record, version_number=version_number)
+      SetVersion(request, table, record, version_number=version_number, version_working=version_working)
   
   # Delete our specified data items
   for (table, record_id) in delete_records:
