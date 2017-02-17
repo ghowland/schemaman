@@ -422,7 +422,7 @@ def SetDirect(request, table, data, commit=True):
   return result
 
 
-def SetVersion(request, table, data, commit_version=False, version_number=None, version_working=None):
+def SetVersion(request, table, data, commit_version=False, version_number=None, version_working=None, commit=True):
   """Put (insert/update) data into this datasource's Version Management tables (working, unless version_number is specified).
   
   This is the same as Set() except version_managament=True, which is more explicit.  This should be easier to read and type,
@@ -547,9 +547,12 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   version_working['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_change)
     
   # Save the change version_working
-  result_record = SetDirect(request, version_table, version_working)
-  
-  return result_record
+  if commit:
+    result_record = SetDirect(request, version_table, version_working)
+    
+    return result_record
+  else:
+    return
   
 
 def SetFromUdnDict(request, data, version_number=None, use_working_version=True):
@@ -636,7 +639,7 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
       Set(request, table, record)
       
     else:
-      SetVersion(request, table, record, version_number=version_number, version_working=version_working)
+      SetVersion(request, table, record, version_number=version_number, version_working=version_working, commit=False)
   
   # Delete our specified data items
   for (table, record_id) in delete_records:
@@ -644,7 +647,11 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
       Delete(request, table, record_id)
       
     else:
-      DeleteVersion(request, table, record_id, version_number=version_number, version_working=version_working)
+      DeleteVersion(request, table, record_id, version_number=version_number, version_working=version_working, commit=False)
+
+  # At the end, if we where working on working version, update the version_working
+  if use_working_version:
+    Set(request, 'version_working', version_working)
 
 def Get(request, table, record_id, version_number=None, use_working_version=True):
   """Get (select single record) from this datasource.
@@ -930,7 +937,7 @@ def Delete(request, table, record_id):
   return result
 
 
-def DeleteVersion(request, table, record_id, version_number=None, version_working=None):
+def DeleteVersion(request, table, record_id, version_number=None, version_working=None, commit=True):
   """Delete a single record from Working Version or a Pending Commit.
   
   Args:
@@ -1010,8 +1017,9 @@ def DeleteVersion(request, table, record_id, version_number=None, version_workin
   version_working['data_yaml'] = utility.path.DumpYamlAsString(update_data)
   version_working['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_data)
   
-  # Save the working version record
-  Set(request, 'version_working', version_working)
+  if commit:
+    # Save the working version record
+    Set(request, 'version_working', version_working)
   
 
 def DeleteFilter(request, table, data, version_number=None, use_working_version=False):
