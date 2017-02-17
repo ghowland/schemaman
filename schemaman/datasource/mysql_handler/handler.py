@@ -816,7 +816,7 @@ def GetUserVersionWorkingRecord(request, user_id=None):
   (schema, schema_table) = GetInfoSchemaAndTable(request, 'version_working')  
   
   # Get the current working record for this user (if  any)
-  sql = "SELECT * FROM version_working WHERE user_id = %s"
+  sql = "SELECT * FROM `version_working` WHERE `user_id` = %s"
   result = connection.Query(sql, [user_id])
   
   # If we have a current change version record, use that
