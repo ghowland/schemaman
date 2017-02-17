@@ -422,7 +422,7 @@ def SetDirect(request, table, data, commit=True):
   return result
 
 
-def SetVersion(request, table, data, commit_version=False, version_number=None, version_working=None, commit=True):
+def SetVersion(request, table, data, commit_version=False, version_number=None, version_data=None, commit=True):
   """Put (insert/update) data into this datasource's Version Management tables (working, unless version_number is specified).
   
   This is the same as Set() except version_managament=True, which is more explicit.  This should be easier to read and type,
@@ -450,12 +450,10 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   else:
     version_table = 'version_working'
   
-  #TODO(t): implement locking? Its hard since this is new stuff :/
-  ## Get the lock key for this schema table row
-  #lock = GetSchemaTableRowLockKey(request, table, record_id, schema=schema)
-  
-  # Get the current working version
-  if version_working is None:
+  # Expand version data
+  if version_data is not None:
+    _, change, delete_change = version_data
+  else:
     # If version_working wasn't passed in, lets get it
     if version_number:
       version_working_list = Get(request, 'version_pending', version_number)
@@ -466,24 +464,18 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
     else:
       if version_number:
         raise Exception('Unable to get version data for version=%s' % version_number)
-  
-  if not version_working:
-    version_working = {'user_id':request.user['id'], 'data_yaml':{}}
-  
-  # If we dont have a working version, make new dicts to store data in
-  change = {}
-  delete_change = {}
-  
-  # If, we have a working version, so get the data
-  if version_working:
-    change = utility.path.LoadYamlFromString(version_working['data_yaml'])
-    delete_change = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
     
-    if not change:
-      change = {}
-    
-    if not delete_change:
-      delete_change = {}
+    if version_working:
+      change = utility.path.LoadYamlFromString(version_working['data_yaml'])
+      delete_change = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
+      
+      if not change:
+        change = {}
+      
+      if not delete_change:
+        delete_change = {}
+    else:
+      version_working = {'user_id':request.user['id'], 'data_yaml':{}}
   
 
   # Format record key
@@ -542,12 +534,11 @@ def SetVersion(request, table, data, commit_version=False, version_number=None, 
   CleanEmptyVersionData(delete_change)
 
   
-  # Put this change record back into the version_change table, so it's saved
-  version_working['data_yaml'] = utility.path.DumpYamlAsString(change)
-  version_working['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_change)
-    
   # Save the change version_working
   if commit:
+    # Put this change record back into the version_change table, so it's saved
+    version_working['data_yaml'] = utility.path.DumpYamlAsString(change)
+    version_working['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_change)
     result_record = SetDirect(request, version_table, version_working)
     
     return result_record
@@ -629,6 +620,10 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
       version_working = version_working_list[0]
     else:
       version_working = {'data_yaml': '', 'delete_data_yaml': ''}
+    update_data = utility.path.LoadYamlFromString(version_working['data_yaml'])
+    delete_data = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
+    # We need to create a tuple to pass down to the lower layers to avoid needing to do serialization all the time
+    version_data = (version_working, update_data, delete_data)
   
   # Set our data items
   for (record_key, record) in records.items():
@@ -639,7 +634,7 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
       Set(request, table, record)
       
     else:
-      SetVersion(request, table, record, version_number=version_number, version_working=version_working, commit=False)
+      SetVersion(request, table, record, version_number=version_number, version_data=version_data, commit=False)
   
   # Delete our specified data items
   for (table, record_id) in delete_records:
@@ -647,10 +642,12 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
       Delete(request, table, record_id)
       
     else:
-      DeleteVersion(request, table, record_id, version_number=version_number, version_working=version_working, commit=False)
+      DeleteVersion(request, table, record_id, version_number=version_number, version_data=version_data, commit=False)
 
   # At the end, if we where working on working version, update the version_working
   if use_working_version:
+    version_working['data_yaml'] = utility.path.DumpYamlAsString(update_data)
+    version_working['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_data) 
     Set(request, 'version_working', version_working)
 
 def Get(request, table, record_id, version_number=None, use_working_version=True):
@@ -937,7 +934,7 @@ def Delete(request, table, record_id):
   return result
 
 
-def DeleteVersion(request, table, record_id, version_number=None, version_working=None, commit=True):
+def DeleteVersion(request, table, record_id, version_number=None, version_data=None, commit=True):
   """Delete a single record from Working Version or a Pending Commit.
   
   Args:
@@ -954,9 +951,11 @@ def DeleteVersion(request, table, record_id, version_number=None, version_workin
   Log('Delete Version: %s: %s' % (table, record_id))
   
   (schema, schema_table) = GetInfoSchemaAndTable(request, table)
-  
-  # Get the current working version
-  if version_working is None:
+
+  # Expand version data
+  if version_data is not None:
+    _, update_data, delete_data = version_data
+  else:
     user = GetUser(request)
     version_working_list = Filter(request, 'version_working', {'user_id': user['id']})
     if version_working_list:
@@ -966,21 +965,21 @@ def DeleteVersion(request, table, record_id, version_number=None, version_workin
     else:
       Log('Delete Version: %s: %s -- No version_working available for this user' % (table, record_id))
       return
-  
-  # If we dont have a working version, make new dicts to store data in
-  update_data = {}
-  delete_data = {}
-  
-  # If, we have a working version, so get the data
-  if version_working:
-    update_data = utility.path.LoadYamlFromString(version_working['data_yaml'])
-    delete_data = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
     
-    if not update_data:
-      update_data = {}
-    
-    if not delete_data:
-      delete_data = {}
+    # If we dont have a working version, make new dicts to store data in
+    update_data = {}
+    delete_data = {}
+  
+    # If, we have a working version, so get the data
+    if version_working:
+      update_data = utility.path.LoadYamlFromString(version_working['data_yaml'])
+      delete_data = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
+      
+      if not update_data:
+        update_data = {}
+      
+      if not delete_data:
+        delete_data = {}
 
   
   # Check to see if this a Real record
@@ -1013,11 +1012,10 @@ def DeleteVersion(request, table, record_id, version_number=None, version_workin
   CleanEmptyVersionData(update_data)
   CleanEmptyVersionData(delete_data)
   
-  # Add this to the working version record
-  version_working['data_yaml'] = utility.path.DumpYamlAsString(update_data)
-  version_working['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_data)
-  
   if commit:
+    # Add this to the working version record
+    version_working['data_yaml'] = utility.path.DumpYamlAsString(update_data)
+    version_working['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_data)
     # Save the working version record
     Set(request, 'version_working', version_working)
   
