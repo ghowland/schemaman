@@ -948,83 +948,71 @@ def DeleteVersion(request, table, record_id, version_number=None, version_workin
   
   (schema, schema_table) = GetInfoSchemaAndTable(request, table)
   
-  user = GetUser(request)
+  # Get the current working version
+  if version_working is None:
+    user = GetUser(request)
+    version_working_list = Filter(request, 'version_working', {'user_id': user['id']})
+    if version_working_list:
+      version_working = version_working_list[0]
+    
+    # No version working, we are done
+    else:
+      Log('Delete Version: %s: %s -- No version_working available for this user' % (table, record_id))
+      return
   
-  # Get the lock key for this schema table row
-  lock = GetSchemaTableRowLockKey(request, table, record_id, schema=schema)
+  # If we dont have a working version, make new dicts to store data in
+  update_data = {}
+  delete_data = {}
   
-  try:
-    # Acquire a lock, so we can work safely
-    AcquireLock(request, lock)
+  # If, we have a working version, so get the data
+  if version_working:
+    update_data = utility.path.LoadYamlFromString(version_working['data_yaml'])
+    delete_data = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
     
-    # Get the current working version
-    if version_working is None:
-      version_working_list = Filter(request, 'version_working', {'user_id': user['id']})
-      if version_working_list:
-        version_working = version_working_list[0]
-      
-      # No version working, we are done
-      else:
-        Log('Delete Version: %s: %s -- No version_working available for this user' % (table, record_id))
-        return
+    if not update_data:
+      update_data = {}
     
-    # If we dont have a working version, make new dicts to store data in
-    update_data = {}
-    delete_data = {}
-    
-    # If, we have a working version, so get the data
-    if version_working:
-      update_data = utility.path.LoadYamlFromString(version_working['data_yaml'])
-      delete_data = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
-      
-      if not update_data:
-        update_data = {}
-      
-      if not delete_data:
-        delete_data = {}
+    if not delete_data:
+      delete_data = {}
 
-    
-    # Check to see if this a Real record
-    real_record = Get(request, table, record_id)
-    
-    # If we have a Real record, make an entry in the Delete Data, because we really want to delete this
-    if real_record:
-      
-      # If we dont have the schema in our delete_data, add it
-      if schema['id'] not in delete_data:
-        delete_data[schema['id']] = {}
-        
-      # If we dont have the schema_table in our delete_data, add it
-      if schema_table['id'] not in delete_data[schema['id']]:
-        delete_data[schema['id']][schema_table['id']] = []
-      
-      # If we dont have this record in the proper place already (other records of that table to-delete), and this isnt a negative number, append it
-      if record_id not in delete_data[schema['id']][schema_table['id']] and record_id >= 0:
-        delete_data[schema['id']][schema_table['id']].append(record_id)
-    
-    # If we have an entry of this record in update_data, then remove that, because Delete always means to clear version data
-    if schema['id'] in update_data:
-      if schema_table['id'] in update_data[schema['id']]:
-        if record_id in update_data[schema['id']][schema_table['id']]:
-          # Delete the record from this update_data table, we are nulling that potential change
-          del update_data[schema['id']][schema_table['id']][record_id]
-    
-    
-    # Clean up the data, so we dont leave empty cruft around
-    CleanEmptyVersionData(update_data)
-    CleanEmptyVersionData(delete_data)
-    
-    # Add this to the working version record
-    version_working['data_yaml'] = utility.path.DumpYamlAsString(update_data)
-    version_working['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_data)
-    
-    # Save the working version record
-    Set(request, 'version_working', version_working)
   
-  finally:
-    # Ensure we release the lock
-    ReleaseLock(request, lock)
-
+  # Check to see if this a Real record
+  real_record = Get(request, table, record_id)
+  
+  # If we have a Real record, make an entry in the Delete Data, because we really want to delete this
+  if real_record:
+    
+    # If we dont have the schema in our delete_data, add it
+    if schema['id'] not in delete_data:
+      delete_data[schema['id']] = {}
+      
+    # If we dont have the schema_table in our delete_data, add it
+    if schema_table['id'] not in delete_data[schema['id']]:
+      delete_data[schema['id']][schema_table['id']] = []
+    
+    # If we dont have this record in the proper place already (other records of that table to-delete), and this isnt a negative number, append it
+    if record_id not in delete_data[schema['id']][schema_table['id']] and record_id >= 0:
+      delete_data[schema['id']][schema_table['id']].append(record_id)
+  
+  # If we have an entry of this record in update_data, then remove that, because Delete always means to clear version data
+  if schema['id'] in update_data:
+    if schema_table['id'] in update_data[schema['id']]:
+      if record_id in update_data[schema['id']][schema_table['id']]:
+        # Delete the record from this update_data table, we are nulling that potential change
+        del update_data[schema['id']][schema_table['id']][record_id]
+  
+  
+  # Clean up the data, so we dont leave empty cruft around
+  CleanEmptyVersionData(update_data)
+  CleanEmptyVersionData(delete_data)
+  
+  # Add this to the working version record
+  version_working['data_yaml'] = utility.path.DumpYamlAsString(update_data)
+  version_working['delete_data_yaml'] = utility.path.DumpYamlAsString(delete_data)
+  
+  # Save the working version record
+  Set(request, 'version_working', version_working)
+  
 
 def DeleteFilter(request, table, data, version_number=None, use_working_version=False):
   """Delete 0 or more records from the datasource, based on filtering rules.
