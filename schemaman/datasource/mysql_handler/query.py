@@ -266,6 +266,10 @@ class Connection:
     
     try:
       (set_request_lock, set_single_threaded_lock) = self.__QueryLock()
+
+      # If request tracing is enabled, keep track of the queries
+      if self.request.trace:
+        self.request.sql_queries.append((sql, params))
       
       done = False
       retry = 0

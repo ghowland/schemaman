@@ -26,7 +26,7 @@ class RequestInvalid(Exception):
 class Request:
   """Contains request information, and can close transactions due to scope GC collections."""
   
-  def __init__(self, connection_data, username, authentication, request_number=None, server_id=None, use_version_management=True, auto_commit=DEFAULT_AUTO_COMMIT):
+  def __init__(self, connection_data, username, authentication, request_number=None, server_id=None, use_version_management=True, auto_commit=DEFAULT_AUTO_COMMIT, trace=False):
     self.connection_data = connection_data
     
     if username == None:
@@ -43,6 +43,10 @@ class Request:
       self.request_number = request_number
     
     
+    # Mechanism to trace all sql queries on a given request
+    self.trace = trace
+    if self.trace:
+        self.sql_queries = []
     # If we have specified a specified server in a Connection Spec datasources, we can have it set here
     self.server_id = server_id
     
