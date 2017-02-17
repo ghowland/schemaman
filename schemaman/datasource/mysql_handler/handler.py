@@ -893,32 +893,6 @@ def AbandonCommit(request):
   connection.AbandonCommit()
 
 
-def Set(request, table, data, version_management=False, commit_version=False, version_number=None, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
-  """Put (insert/update) data into this datasource.
-  
-  Args:
-    request: Request Object, the connection spec data and user and auth info, etc
-    table: string, name of table to operate on
-    data: dict, record that we want to store in the table row
-    commit_version: boolean (default False), if True, this will automatically commit this version as part of this set (in version_commit)
-    version_number: int (default None), if an int, this is the version number in the version_change or version_commit
-        tables.  version_change is scanned before version_commit, as these are more likely to be requested.
-    noop: boolean (default False), if True do not actually query the database, (no operation)
-    update_returns_id: boolean (default True), if True UPDATE will return the PKEY (ex: `id`) keeping the same results that INSERT does
-    debug: boolean, if True will log more verbosely
-    commit: boolean (default True), if True any queries that could be commited will be (single query transaction), if False then a later Commit() will be required
-
-  Return: int or None, If commit_version==True then this is the real table's PKEY int, else None
-  """
-  # If we are directly working with database tales
-  if not version_management:
-    return SetDirect(request, table, data, noop=noop, update_returns_id=update_returns_id, debug=debug, commit=commit)
-  
-  # Else, this work should be in the version_* tables
-  else:
-    return SetVersion(request, table, data, commit_version=commit_version, version_number=version_number, noop=noop, update_returns_id=update_returns_id, debug=debug)
-
-
 def SetDirect(request, table, data, noop=False, update_returns_id=True, debug=SQL_DEBUG, commit=True):
   """Put (insert/update) data into this datasource.  Directly writes to database.
   

@@ -394,11 +394,13 @@ def Set(request, table, data, version_management=False, commit_version=False, ve
   
   Returns: int or None, if creating a new record this returns the newly created record primary key (ex: `id`), otherwise None
   """
-  handler = DetermineHandlerModule(request)
   
-  result = handler.Set(request, table, data, version_management=version_management, commit_version=commit_version, version_number=version_number, commit=commit)
-  
-  return result
+  if version_management:
+    return SetVersion(request, table, data, commit_version=commit_version, version_number=version_number, commit=commit)
+  else:
+    handler = DetermineHandlerModule(request)
+    
+    return handler.SetDirect(request, table, data, commit=commit)
 
 
 def SetDirect(request, table, data, commit=True):
