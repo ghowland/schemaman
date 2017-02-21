@@ -624,6 +624,11 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
       version_working = {'data_yaml': '', 'delete_data_yaml': ''}
     update_data = utility.path.LoadYamlFromString(version_working['data_yaml'])
     delete_data = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
+    if update_data is None:
+      update_data = {}
+    if delete_data is None:
+      delete_data = {}
+
     # We need to create a tuple to pass down to the lower layers to avoid needing to do serialization all the time
     version_data = (version_working, update_data, delete_data)
   
