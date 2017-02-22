@@ -626,8 +626,10 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
     # Put this record back into the update_data section, so that we keep the updated IDs, if they have been
     update_data[schema_id][schema_table_id][record_id] = record
   
-  
+  # For deletions we also need to sort (as to avoid breaking foreign key constraints)
   # Delete the specified records as well
+  # list of table_name, record_id
+  delete_items = {}
   for (schema_id, schema_data) in delete_data.items():
     for (schema_table_id, schema_table_data) in schema_data.items():
       (schema, schema_table) = GetInfoSchemaAndTableById(request, schema_table_id)
@@ -636,10 +638,68 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
         # Get the existing record, so we can store it for rollback
         real_record = Get(request, schema_table['name'], record_id)
         data_control.EnsureNestedDictsExist(rollback_data, [schema_id, schema_table_id, record_id], real_record)
-        
-        # Delete the Real record
-        Delete(request, schema_table['name'], record_id)
+        delete_items[(schema_id, schema_table_id, record_id)] = real_record
 
+  deferred_items = dict(delete_items)
+  sorted_items = []
+  change_occurred = True
+  
+  #TODO(t): this is pretty ugly... but basically we want to make sure we do the exact OPPOSITE order of the insert
+  #TODO(t): have a unified method for determining order (we can just reverse it for insert/delete)
+  while deferred_items and change_occurred:
+    # This must be set to True each time, or we will not loop again, and if there are still deferred items, we will error
+    change_occurred = False
+    
+    # Loop over our update_items and create a dependency structure
+    deferred_keys = deferred_items.keys()
+    for record_key in deferred_keys:
+      record_data = deferred_items[record_key]
+      
+      # Test the fields for dependencies first
+      dep_remains = False
+
+      # Check if this has any field dependencies
+      for (field, field_value) in record_data.items():
+        # If we found a dep, we can just stop looking
+        if dep_remains:
+          break
+        if field.endswith('_id') and type(field_value) == int:
+          # Get the table name (potentially), by stripping off the '_id' characters
+          table_name = field[:-3]
+          
+          # Ensure this is actually a table name we know about
+          try:
+            # If this doesnt throw an exception, this is a real table name, and so this is a join table, and we should add it as a dependency
+            field_schema, field_schema_table = GetInfoSchemaAndTable(request, table_name)
+          except Exception, e:
+            # This is not a table name, so we dont need to track it as a dependency, skip this field
+            continue
+          
+          #TODO(t): this should really look at foreign keys (or the equivalent)-- but we'll do this for now
+          # Loop over all remaining keys, if the table we are referencing is in the remaining list we 
+          # cannot go now, so we'll add the field dep
+          for k in deferred_keys:
+            if k == record_key:
+              continue
+            if field_schema['id'] == schema_id and k[1] == field_schema_table['id']:
+              dep_remains = True
+          
+      # If we dont have any field dependencies, then we can be removed from the deferred items, as we are set
+      if not dep_remains:
+        # print 'No dependencies, so removing: %s' % str(record_key)
+        del deferred_items[record_key]
+        
+        # We modified the deferred items, so change has occurred
+        change_occurred = True
+        
+        # We can sort these items on the order they clear being deferred, this guarantees we know their dependencies already, so is perfect
+        sorted_items.insert(0, record_key)
+  
+  # Now that we have the order, do the actual delete
+  for (schema_id, schema_table_id, record_id) in sorted_items:
+    (schema, schema_table) = GetInfoSchemaAndTableById(request, schema_table_id)
+    Delete(request, schema_table['name'], record_id)
+  
   print '\n\n::: Roll Back data:\n%s\n\n' % pprint.pformat(rollback_data)
   
   # Save the updated version_commit results back into the DB, with our rollback data and any updated fields from dependencies
