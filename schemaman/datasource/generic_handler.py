@@ -621,7 +621,7 @@ def SetFromUdnDict(request, data, version_number=None, use_working_version=True)
     if version_working_list:
       version_working = version_working_list[0]
     else:
-      version_working = {'data_yaml': '', 'delete_data_yaml': ''}
+      version_working = {'data_yaml': '', 'delete_data_yaml': '', 'user_id': user['id']}
     update_data = utility.path.LoadYamlFromString(version_working['data_yaml'])
     delete_data = utility.path.LoadYamlFromString(version_working['delete_data_yaml'])
     if update_data is None:
