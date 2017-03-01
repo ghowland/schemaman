@@ -1061,9 +1061,17 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
       working_version = GetUserVersionWorkingRecord(request)
 
       working_data = utility.path.LoadYamlFromString(working_version['data_yaml'])
+      delete_data = utility.path.LoadYamlFromString(working_version['delete_data_yaml'])
 
-      #TODO(g): Also handle deletes
-      pass
+      # If the record was deleted, lets return None
+      if delete_data and schema['id'] in delete_data:
+        db_data = delete_data[schema['id']]
+        if schema_table['id'] in db_data:
+          table_data = db_data[schema_table['id']]
+
+          # If we have this record_id, in this table, in this database, then return the working record
+          if record_id in table_data:
+            return None
       
       # If we have the working data (!None), and this scheme ID is in it, then look deeper
       if working_data and schema['id'] in working_data:
@@ -1107,13 +1115,21 @@ def Get(request, table, record_id, version_number=None, use_working_version=True
     
     rollback_record_data = utility.path.LoadYamlFromString(version_record['rollback_data_yaml'], {})
     update_record_data = utility.path.LoadYamlFromString(version_record['data_yaml'], {})
+    delete_record_data = utility.path.LoadYamlFromString(version_record['delete_data_yaml'], {})
     
     # Layer the rollback data (if any), underneath the update data
     record_data = rollback_record_data
     record_data.update(update_record_data)
     
-    #TODO(g): Also handle deletes
-    pass
+    # If the record was deleted, lets return None
+    if delete_record_data and schema['id'] in delete_record_data:
+      db_data = delete_record_data[schema['id']]
+      if schema_table['id'] in db_data:
+        table_data = db_data[schema_table['id']]
+
+        # If we have this record_id, in this table, in this database, then return the working record
+        if record_id in table_data:
+          return None
     
     # If we have the working data (!None), and this scheme ID is in it, then look deeper
     if schema['id'] in record_data:
