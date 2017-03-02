@@ -471,7 +471,7 @@ def CommitChangeList(request, version_number):
   Commit(request)
 
 
-def CommitVersionRecordToDatasource(request, version_commit_id, change_record, commit=True):
+def CommitVersionRecordToDatasource(request, version_commit_id, change_record, commit=True, table_dependencies=None):
   """Commit a change from the version_commit table into the real (non-versioning) datasource tables.
   
   This should not be called from outside this library, mostly because there is no reason to and it
@@ -531,7 +531,21 @@ def CommitVersionRecordToDatasource(request, version_commit_id, change_record, c
       
       # Test the fields for dependencies first
       field_dependencies = {}
-      
+
+      # In addition to looking for linking fields by name (and before we have schema in the DB to define it) we'll allow people to pass
+      # in a dict of (schema_id, table_id) -> (field_name, linking_table_id) to define the links between tables that are non-obvious
+      # The goal here is to let people pass in defined links, instead of us just figuring it out from the names of the fields
+      if table_dependencies and record_key[:2] in table_dependencies:
+        linking_field, linking_table_id = table_dependencies[record_key[:2]]
+        linking_table_schema, linking_table_schema_table = GetInfoSchemaAndTableById(request, linking_table_id)
+        for k in deferred_keys:
+          if k == record_key:
+            continue
+          if k[0] == record_key[0] and k[1] == linking_table_schema_table['id']:
+            field_dependencies[linking_table_schema_table['name']] = record_data[linking_field]
+            dependency_update[record_key] = {linking_field: {'table': linking_table_schema_table['name'], 'value': record_data[linking_field]}}
+
+
       # Check if this has any field dependencies
       for (field, field_value) in record_data.items():
         if field.endswith('_id') and type(field_value) == int and field_value < 0:

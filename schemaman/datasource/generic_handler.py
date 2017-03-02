@@ -1048,11 +1048,11 @@ def DeleteFilter(request, table, data, version_number=None, use_working_version=
   return result
 
 
-def CommitVersionRecordToDatasource(request, version_commit_id, change_record, commit=True):
+def CommitVersionRecordToDatasource(request, version_commit_id, change_record, commit=True, table_dependencies=None):
   """Pushes the contents of a version_commit row into the Real data source"""
   handler = DetermineHandlerModule(request)
   
-  result = handler.CommitVersionRecordToDatasource(request, version_commit_id, change_record, commit=commit)
+  result = handler.CommitVersionRecordToDatasource(request, version_commit_id, change_record, commit=commit, table_dependencies=table_dependencies)
   
   return result
 
