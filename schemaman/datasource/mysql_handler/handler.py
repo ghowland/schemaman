@@ -1488,13 +1488,12 @@ def GetWorkingVersionData(request, username=None):
     username = request.username
   
   # Get the user_id
-  user_list = Filter(request, 'user', {'name':username})
+  user = GetUser(request, username)
   
-  if not user_list:
+  if not user:
     return ({}, {})
   
   try:
-    user = user_list[0]
     
     version_working_list = Filter(request, 'version_working', {'user_id': user['id']})
     version_working = version_working_list[0]
